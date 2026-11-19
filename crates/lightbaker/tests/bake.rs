@@ -148,6 +148,8 @@ fn shadows_occlusion_bounces_and_reuse() {
     assert_eq!(again.stats.tiles_baked, 0);
     assert_eq!(again.stats.chunks_baked, 0);
     assert_eq!(again.direct, b.direct);
+    // the same light gives the same file, byte for byte: a pipeline that hashes it publishes nothing new
+    assert!(lightbaker::output::write(&s, &again).unwrap() == lightbaker::output::write(&s, &b).unwrap(), "the .lbake differs between a bake and its cached rerun");
     let moved = bake(&scene(6.0), &gpu, &opts).unwrap();
     assert!(moved.stats.tiles_baked > 0 && moved.stats.tiles_baked < moved.stats.tiles, "{} of {}", moved.stats.tiles_baked, moved.stats.tiles);
     let _ = std::fs::remove_dir_all(&dir);

@@ -20,7 +20,7 @@ use anyhow::Result;
 use flate2::{Compression, write::DeflateEncoder};
 use serde::Serialize;
 
-use crate::bake::{Bake, Stats};
+use crate::bake::Bake;
 use crate::encode::{Format, bc5, ktx2, rgb9e5};
 use crate::scene::Scene;
 
@@ -54,7 +54,8 @@ pub struct Header {
     pub meshes: Vec<MeshOut>,
     pub volume: Option<VolumeOut>,
     pub chunks: Vec<Chunk>,
-    pub stats: Stats,
+    // no run's stats (time, tiles baked from the cache or anew): the same scene and light give the same bytes, so an
+    // asset pipeline that hashes its files publishes nothing new when nothing changed (the CLI prints them instead)
 }
 
 #[derive(Serialize)]
@@ -130,7 +131,6 @@ pub fn write(scene: &Scene, bake: &Bake) -> Result<Vec<u8>> {
         meshes: scene.header.meshes.iter().map(|m| MeshOut { name: m.name.clone(), triangles: m.triangles }).collect(),
         volume: bake.volume.as_ref().map(|v| VolumeOut { origin: v.origin, step: v.step, size: v.size, scale }),
         chunks: Vec::new(),
-        stats: bake.stats.clone(),
     };
     // offsets are from the start of the chunk area, which follows the header (8-aligned)
     let mut at = 0u64;

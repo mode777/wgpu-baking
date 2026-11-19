@@ -17,7 +17,6 @@ export interface BakeHeader {
   meshes: { name: string; triangles: number }[];
   volume: { origin: [number, number, number]; step: number; size: [number, number, number]; scale: number } | null;
   chunks: { name: string; offset: number; length: number }[];
-  stats: { tiles: number; tilesBaked: number; texelsBaked: number; chunks: number; chunksBaked: number; seconds: number };
 }
 
 export interface LightBake {
