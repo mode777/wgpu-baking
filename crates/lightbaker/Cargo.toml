@@ -6,15 +6,39 @@ edition.workspace = true
 license.workspace = true
 repository.workspace = true
 
+[features]
+default = ["native"]
+# Native targets: rayon threads, pollster, zstd, the file tile cache, every native wgpu backend (ADR-0003).
+native = ["dep:rayon", "dep:pollster", "dep:zstd", "wgpu/default"]
+# The browser (wasm32-unknown-unknown): WebGPU only, single-threaded CPU stages, no C dependencies (ADR-0003).
+web = ["wgpu/webgpu"]
+
 [dependencies]
 anyhow.workspace = true
 blake3.workspace = true
 bytemuck.workspace = true
 glam.workspace = true
-pollster.workspace = true
-rayon.workspace = true
+pollster = { workspace = true, optional = true }
+rayon = { workspace = true, optional = true }
 serde.workspace = true
 serde_json.workspace = true
-wgpu.workspace = true
-zstd.workspace = true
+wgpu = { workspace = true, features = ["std", "wgsl", "parking_lot"] }
+web-time.workspace = true
+zstd = { workspace = true, optional = true }
 flate2.workspace = true
+
+[[test]]
+name = "bake"
+required-features = ["native"]
+
+[[test]]
+name = "scenes"
+required-features = ["native"]
+
+[[example]]
+name = "baseline"
+required-features = ["native"]
+
+[[example]]
+name = "export-upstream-basic"
+required-features = ["native"]

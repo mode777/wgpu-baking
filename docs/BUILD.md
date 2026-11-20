@@ -45,8 +45,13 @@ cargo run --release -p lightbaker --example baseline -- --json out.json  # phase
 
 ## WASM engine
 
+Features of `lightbaker` (ADR-0003): `native` (default: rayon, pollster, zstd, `FsStore` file cache, all
+native wgpu backends) and `web` (WebGPU only, sequential CPU stages, `MemoryStore`, KTX2 without zstd).
+GPU integration tests and examples require `native`.
+
 ```powershell
-cargo build -p lightbaker --target wasm32-unknown-unknown --no-default-features --features web   # (P2)
+cargo build -p lightbaker --target wasm32-unknown-unknown --no-default-features --features web   # verified P2.1
+cargo test -p lightbaker --no-default-features --features web --lib                              # web-feature unit tests on the host
 wasm-pack build crates/lightbaker-web --target web --release                                     # (P2) → crates/lightbaker-web/pkg
 cargo test -p lightbaker-web --target wasm32-unknown-unknown                                     # (P2) wasm-bindgen-test runner
 ```

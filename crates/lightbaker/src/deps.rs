@@ -3,7 +3,7 @@
 //! with the settings, the sun, the sky and the materials. A tile whose hash is unchanged is reused.
 
 use glam::Vec3;
-use rayon::prelude::*;
+use crate::par::*;
 
 use crate::scene::Scene;
 

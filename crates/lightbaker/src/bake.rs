@@ -2,15 +2,14 @@
 //! on the GPU (the sun and occlusion, then the bounces, each pass reading the light of every tile from
 //! the last), the CPU's texel passes, and the atlas put together from every tile.
 
-use std::path::Path;
-use std::time::Instant;
+use web_time::Instant;
 
 use anyhow::Result;
 use glam::Vec3;
-use rayon::prelude::*;
+use crate::par::*;
 
 use crate::bvh::Bvh;
-use crate::cache::{Cache, Pack, Unpack};
+use crate::cache::{Cache, Pack, TileStore, Unpack};
 use crate::deps::{Aabb, Boxes, global_hash, hash_reach};
 use crate::filter::{Surface, fill, smooth, sun_field};
 use crate::gpu::{Gpu, Params, Pass};
@@ -29,7 +28,7 @@ const PUSH: f32 = 0.03;
 
 pub struct Options<'a> {
     /// where baked tiles are kept between bakes (none: everything is baked)
-    pub cache: Option<&'a Path>,
+    pub cache: Option<&'a dyn TileStore>,
     pub log: &'a (dyn Fn(&str) + Sync),
 }
 

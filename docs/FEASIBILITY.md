@@ -50,6 +50,8 @@ Witness article URLs given are wrong.
 
 ## 3. WASM blockers (exact locations)
 
+Status: B4–B7 fixed in P2.1 (`platform-shims`; the wasm32 build compiles); B1–B3, B8 in P2.2; B9 in Phase 6.
+
 | # | Location | Construct | Problem on `wasm32-unknown-unknown` + WebGPU | Fix (ADR-0003) |
 |---|---|---|---|---|
 | B1 | `gpu/mod.rs` `Gpu::new` | `pollster::block_on(Self::open())` | Cannot block the JS event loop | public `async fn open`; `new` only under `native` |

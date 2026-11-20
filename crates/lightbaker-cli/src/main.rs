@@ -6,6 +6,7 @@ use std::time::Instant;
 
 use anyhow::{Context, Result};
 use clap::Parser;
+use lightbaker::cache::{FsStore, TileStore};
 use lightbaker::{Gpu, Options, Scene, bake, output};
 
 #[derive(Parser)]
@@ -31,6 +32,7 @@ struct Args {
 fn main() -> Result<()> {
     let args = Args::parse();
     let gpu = Gpu::new()?;
+    let store = args.cache.as_deref().map(FsStore::new).transpose()?;
     if !args.quiet {
         eprintln!("GPU: {}", gpu.adapter);
     }
@@ -47,7 +49,7 @@ fn main() -> Result<()> {
         if !args.quiet {
             eprintln!("{name}:");
         }
-        let baked = bake(&scene, &gpu, &Options { cache: args.cache.as_deref(), log: &log })?;
+        let baked = bake(&scene, &gpu, &Options { cache: store.as_ref().map(|s| s as &dyn TileStore), log: &log })?;
         let dir = args.out.clone().unwrap_or_else(|| path.parent().map(PathBuf::from).unwrap_or_default());
         std::fs::create_dir_all(&dir)?;
         let file = dir.join(format!("{name}.lbake"));

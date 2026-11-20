@@ -15,6 +15,7 @@ pub mod filter;
 pub mod gpu;
 pub mod layout;
 pub mod output;
+pub mod par;
 pub mod raster;
 pub mod scene;
 pub mod volume;

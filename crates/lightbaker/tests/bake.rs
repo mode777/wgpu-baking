@@ -35,7 +35,8 @@ fn shadows_occlusion_bounces_and_reuse() {
     let dir = std::env::temp_dir().join(format!("lightbaker-test-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     let log = |s: &str| eprintln!("{s}");
-    let opts = Options { cache: Some(&dir), log: &log };
+    let store = lightbaker::cache::FsStore::new(&dir).unwrap();
+    let opts = Options { cache: Some(&store), log: &log };
     let s = scene(8.0);
     let b = bake(&s, &gpu, &opts).unwrap();
     let l = &b.layout;

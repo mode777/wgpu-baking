@@ -4,7 +4,7 @@
 //! filled from their neighbours.
 
 use std::collections::BTreeMap;
-use std::time::Instant;
+use web_time::Instant;
 
 use anyhow::Result;
 use glam::Vec3;

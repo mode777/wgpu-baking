@@ -1,6 +1,6 @@
 # ADR-0003: Platform abstraction for native and WASM
 
-- **Status:** proposed (implemented in Phase 2)
+- **Status:** accepted — points 1, 3–6 implemented in P2.1 (`platform-shims`); 2, 7, 8 in P2.2
 - **Date:** 2026-11-20
 - **Phase:** 2
 - **Requirements:** REQ-WASM-01 … 03, REQ-WASM-10
@@ -21,7 +21,8 @@ native-only constructs in `crates/lightbaker`:
 
 1. Cargo features on `lightbaker`: `native` (default: rayon, pollster, zstd, fs cache) and `web`
    (wgpu `webgpu` backend only, `web-time`, no rayon, no zstd). WebGL is **not** enabled for the
-   baker (no compute shaders; would be a silent downgrade).
+   baker (no compute shaders; would be a silent downgrade). The workspace `wgpu` dependency has
+   `default-features = false`; `native` enables `wgpu/default`, `web` enables `wgpu/webgpu`.
 2. `bake()` and `Gpu::run()` become `async`. Readback: `map_async` with a `futures` oneshot
    channel; native polls with `device.poll(wait)` before awaiting, the web awaits the browser.
    `Gpu::new()` (blocking) stays for the CLI under `native`.
@@ -29,10 +30,13 @@ native-only constructs in `crates/lightbaker`:
 4. Parallelism: a small `par` module: `par_iter()`/`par_iter_mut()` map to rayon under `native` and
    to sequential iterators otherwise (same results; determinism preserved).
 5. Cache: `trait TileStore` with `FsStore` (native; upstream file names and zstd) and `MemoryStore`
-   (web; JS may persist entries in IndexedDB through the bridge).
+   (web; JS may persist entries in IndexedDB through the bridge). Implemented (P2.1) as
+   `Options::cache: Option<&dyn TileStore>`, replacing upstream's `Option<&Path>`.
 6. KTX2 supercompression: zstd under `native`; under `web` KTX2 is written uncompressed
    (supercompression scheme 0, already readable by `js/src/ktx2.ts`) or compressed by a pure-Rust
-   encoder if one proves adequate (decided during Phase 2).
+   encoder if one proves adequate (decided during Phase 2). **Decided (P2.1):** uncompressed on the
+   web; a pure-Rust zstd encoder would add a dependency and still not match native bytes. Native
+   `.lbake` bytes are unchanged.
 7. Instance creation: on `web`, `Backends::BROWSER_WEBGPU` explicitly; adapter info and
    `isFallbackAdapter` are reported; fallback adapters are refused unless allowed.
 8. Limits: request explicit limits (`maxStorageBufferBindingSize`, `maxBufferSize`) up to the

@@ -66,7 +66,7 @@ Requirements: REQ-WASM-10, REQ-ENG-03, REQ-ENG-07, REQ-LGT-01, REQ-LGT-05, REQ-G
 **Goal:** the *existing* baker (planar layout, sun, sky, bounces, volume) bakes a small scene in
 the browser on WebGPU. **Deliverable:** browser PoC page baking `upstream-basic`.
 
-- [ ] **P2.1** `platform-shims` — Features `native`/`web`; `web-time`; `par` shim; `TileStore`
+- [x] **P2.1** `platform-shims` — Features `native`/`web`; `web-time`; `par` shim; `TileStore`
       (`FsStore`/`MemoryStore`); zstd gated (ADR-0003, blockers B4–B7). Native tests unchanged.
 - [ ] **P2.2** `async-gpu` — `Gpu::open` async, async readback, `bake()` async; CLI/tests via
       `block_on`; explicit limits; adapter report (B1–B3, B8).

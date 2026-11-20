@@ -93,11 +93,13 @@ pub struct SceneBuffers {
 }
 
 impl Gpu {
+    /// Opens the GPU, blocking until it is ready (native only; the web awaits [`Gpu::open`]).
+    #[cfg(feature = "native")]
     pub fn new() -> Result<Gpu> {
         pollster::block_on(Self::open())
     }
 
-    async fn open() -> Result<Gpu> {
+    pub async fn open() -> Result<Gpu> {
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor::new_without_display_handle_from_env());
         let adapter = instance
             .request_adapter(&wgpu::RequestAdapterOptions { power_preference: wgpu::PowerPreference::HighPerformance, ..Default::default() })

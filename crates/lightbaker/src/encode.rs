@@ -93,9 +93,9 @@ impl Format {
     }
 }
 
-/// A one-level 2D KTX2 file around `data`, zstd supercompressed.
+/// A one-level 2D KTX2 file around `data`, zstd supercompressed (natively; see [`supercompress`]).
 pub fn ktx2(format: Format, w: u32, h: u32, data: &[u8]) -> Result<Vec<u8>> {
-    let packed = zstd::bulk::compress(data, 19)?;
+    let (scheme, packed) = supercompress(data)?;
     let dfd = dfd(format);
     const HEADER: usize = 12 + 9 * 4 + 4 * 4 + 2 * 8;
     const LEVELS: usize = 3 * 8;
@@ -103,7 +103,7 @@ pub fn ktx2(format: Format, w: u32, h: u32, data: &[u8]) -> Result<Vec<u8>> {
     let data_at = (dfd_at + dfd.len()).div_ceil(8) * 8;
     let mut out = Vec::with_capacity(data_at + packed.len());
     out.extend_from_slice(&[0xAB, 0x4B, 0x54, 0x58, 0x20, 0x32, 0x30, 0xBB, 0x0D, 0x0A, 0x1A, 0x0A]);
-    for v in [format.vk(), format.type_size(), w, h, 0, 0, 1, 1, 2] {
+    for v in [format.vk(), format.type_size(), w, h, 0, 0, 1, 1, scheme] {
         out.extend_from_slice(&v.to_le_bytes());
     }
     // the data format descriptor, no key/value data, no supercompression global data
@@ -119,6 +119,18 @@ pub fn ktx2(format: Format, w: u32, h: u32, data: &[u8]) -> Result<Vec<u8>> {
     out.resize(data_at, 0);
     out.extend_from_slice(&packed);
     Ok(out)
+}
+
+/// KTX2 supercompression: zstd (scheme 2) natively; none (scheme 0) on the web, which has no zstd
+/// encoder (ADR-0003). Readers (`js/src/ktx2.ts`) accept both.
+#[cfg(feature = "native")]
+fn supercompress(data: &[u8]) -> Result<(u32, Vec<u8>)> {
+    Ok((2, zstd::bulk::compress(data, 19)?))
+}
+
+#[cfg(not(feature = "native"))]
+fn supercompress(data: &[u8]) -> Result<(u32, Vec<u8>)> {
+    Ok((0, data.to_vec()))
 }
 
 /// The basic data format descriptor of a format (Khronos Data Format 1.3), linear, BT.709 primaries.
@@ -176,6 +188,31 @@ mod tests {
             for i in 0..3 {
                 assert!((d[i] - c[i]).abs() <= m / 256.0 + 1e-6, "{c:?} -> {d:?}");
             }
+        }
+    }
+}
+
+#[cfg(test)]
+mod ktx2_tests {
+    use super::*;
+
+    #[test]
+    fn supercompression_by_platform() {
+        let data: Vec<u8> = (0..4096u32).map(|i| (i % 7) as u8).collect();
+        let k = ktx2(Format::Rgb9e5, 32, 32, &data).unwrap();
+        let u32_at = |o: usize| u32::from_le_bytes(k[o..o + 4].try_into().unwrap());
+        let u64_at = |o: usize| u64::from_le_bytes(k[o..o + 8].try_into().unwrap());
+        let (scheme, offset, len, raw_len) = (u32_at(44), u64_at(80) as usize, u64_at(88) as usize, u64_at(96) as usize);
+        assert_eq!(raw_len, data.len());
+        #[cfg(feature = "native")]
+        {
+            assert_eq!(scheme, 2);
+            assert_eq!(zstd::bulk::decompress(&k[offset..offset + len], raw_len).unwrap(), data);
+        }
+        #[cfg(not(feature = "native"))]
+        {
+            assert_eq!(scheme, 0);
+            assert_eq!(&k[offset..offset + len], &data[..]);
         }
     }
 }

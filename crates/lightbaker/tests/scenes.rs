@@ -9,6 +9,7 @@ mod gpu;
 use std::path::PathBuf;
 
 use gpu::gpu;
+use lightbaker::cache::MemoryStore;
 use lightbaker::expect::{Expect, Map, Probe};
 use lightbaker::{Options, Scene, bake, output};
 
@@ -51,4 +52,13 @@ fn upstream_basic_bakes_reproducibly_and_meets_its_expectations() {
     bad.probes.push(Probe { name: "nowhere".into(), map: Map::Direct, mesh: 0, point: [10.0, 5.0, 10.0] });
     let err = format!("{:#}", bad.evaluate(&scene, &first).unwrap_err());
     assert!(err.contains("probe nowhere"), "{err}");
+
+    // the in-memory store (the browser's) reuses every tile and probe chunk of an unchanged scene
+    let store = MemoryStore::new();
+    let fresh = bake(&scene, &gpu, &Options { cache: Some(&store), log: &log }).unwrap();
+    assert!(!store.is_empty());
+    let again = bake(&scene, &gpu, &Options { cache: Some(&store), log: &log }).unwrap();
+    assert_eq!((again.stats.tiles_baked, again.stats.chunks_baked), (0, 0));
+    assert!(output::write(&scene, &again).unwrap() == output::write(&scene, &first).unwrap());
+    assert!(output::write(&scene, &fresh).unwrap() == output::write(&scene, &first).unwrap());
 }
