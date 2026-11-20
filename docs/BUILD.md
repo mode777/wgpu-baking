@@ -103,8 +103,10 @@ Standard GitHub-hosted runners only; GPU work runs on software adapters (Mesa la
 Each job should stay under ~10 minutes. Performance numbers from software adapters are not
 meaningful; real-GPU measurements go into the phase reports.
 
-Workflow: [.github/workflows/ci.yml](../.github/workflows/ci.yml). Status (P1.3): `rust-native` and
-`rust-gpu` exist; `wasm` arrives with P2.3, `web` with P2.6. New crates are added to the
+Workflow: [.github/workflows/ci.yml](../.github/workflows/ci.yml). Status: `rust-native`, `rust-gpu` (P1.3)
+and `wasm` (P2.3: wasm32 build of `lightbaker` with `web`, web-feature unit tests, and a guard that fails
+if `pollster`, `rayon` or `zstd` enter the web dependency tree) exist; `wasm-pack`/`wasm-bindgen-test`
+join `wasm` with P2.4, `web` arrives with P2.6. New crates are added to the
 `CLIPPY_CRATES` list there to be linted with `-D warnings`.
 
 GPU test environment variables (read by the test helper in `crates/lightbaker/tests/bake.rs`):

@@ -70,7 +70,7 @@ the browser on WebGPU. **Deliverable:** browser PoC page baking `upstream-basic`
       (`FsStore`/`MemoryStore`); zstd gated (ADR-0003, blockers B4–B7). Native tests unchanged.
 - [x] **P2.2** `async-gpu` — `Gpu::open` async, async readback, `bake()` async; CLI/tests via
       `block_on`; explicit limits; adapter report (B1–B3, B8).
-- [ ] **P2.3** `ci-wasm` — CI `wasm` job: `lightbaker` for `wasm32-unknown-unknown --features web`,
+- [x] **P2.3** `ci-wasm` — CI `wasm` job: `lightbaker` for `wasm32-unknown-unknown --features web`,
       later `wasm-pack build` and `wasm-bindgen-test` (Node).
 - [ ] **P2.4** `wasm-bridge` — `crates/lightbaker-web`: `capabilities()`, `WebBaker::create/bake/cancel`,
       progress callback, typed errors, device-lost callback (INTERFACES.md §7–8).

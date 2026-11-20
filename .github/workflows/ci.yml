@@ -38,6 +38,27 @@ jobs:
         shell: bash
         run: for c in $CLIPPY_CRATES; do cargo clippy -p "$c" --all-targets --locked -- -D warnings; done
 
+  wasm:
+    name: wasm (browser build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - name: Toolchain (rust-toolchain.toml, includes wasm32-unknown-unknown)
+        run: rustup show active-toolchain || rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+      - name: Build lightbaker for wasm32 (web feature)
+        run: cargo build -p lightbaker --target wasm32-unknown-unknown --no-default-features --features web --locked
+      - name: No blocking executor, threads or C compression on the web path (ADR-0003)
+        shell: bash
+        run: |
+          deps=$(cargo tree -p lightbaker --target wasm32-unknown-unknown --no-default-features --features web -e normal --prefix none --locked)
+          if echo "$deps" | grep -E '^(pollster|rayon|rayon-core|zstd|zstd-sys) '; then
+            echo "::error::native-only crates in the web dependency tree"; exit 1
+          fi
+      - name: Engine unit tests with the web feature (host)
+        run: cargo test -p lightbaker --no-default-features --features web --lib --locked
+
   rust-gpu:
     name: rust-gpu (lavapipe)
     runs-on: ubuntu-latest
