@@ -17,7 +17,8 @@ from it are in [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md).
 
 ## Current status
 
-**Planning complete, implementation not started.** No source code has been forked or written yet.
+**Phase 1 in progress.** Upstream lightbaker is imported with full history (remote `upstream`);
+its original README is [docs/UPSTREAM_README.md](docs/UPSTREAM_README.md).
 The active phase and its exit criteria are tracked in [ROADMAP.md](ROADMAP.md).
 
 ## Document map (source of truth)

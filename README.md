@@ -6,7 +6,7 @@ soft shadows, emissive surfaces, point/spot/area lights — with automatic light
 
 Visual target: stylized, fully baked lighting reminiscent of *The Witness* (2016).
 
-> **Status: planning complete, implementation not started.** See [ROADMAP.md](ROADMAP.md).
+> **Status: Phase 1 in progress — upstream lightbaker imported (see [docs/UPSTREAM_README.md](docs/UPSTREAM_README.md)).** See [ROADMAP.md](ROADMAP.md).
 
 ## How it will work
 

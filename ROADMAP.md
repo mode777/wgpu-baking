@@ -34,7 +34,7 @@ name in `code`), small enough to review. Requirement IDs refer to
 **Goal:** a clean fork with reproducible native builds and a measured baseline.
 **Deliverable:** documented technical architecture (verified) and a working native baseline.
 
-- [ ] **P1.1** `fork-baseline` — Initialise git here, add `upstream` remote (jer-nc/lightbaker),
+- [x] **P1.1** `fork-baseline` — Initialise git here, add `upstream` remote (jer-nc/lightbaker),
       merge upstream history (`--allow-unrelated-histories`, since this folder already holds docs
       and `openspec/`), move upstream README to `docs/UPSTREAM_README.md` (ADR-0001).
 - [ ] **P1.2** `repo-hygiene` — `rust-toolchain.toml`, `.gitignore` additions (`pkg/`, `dist/`,
