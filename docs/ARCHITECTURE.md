@@ -53,7 +53,7 @@ Key properties:
 │   │       src/gpu/{mod.rs,trace.wgsl}
 │   │       + src/platform/{time,par}.rs, src/store.rs, src/lights.rs   (new)
 │   ├── lightbaker-cli/             upstream native CLI
-│   ├── lightbaker-uv/              Unwrapper contract + native xatlas FFI (ADR-0006); vendor/xatlas @ f700c77
+│   ├── lightbaker-uv/              native xatlas FFI behind lightbaker::unwrap (ADR-0006); vendor/xatlas @ f700c77
 │   └── lightbaker-web/             wasm-bindgen bridge → pkg/ (generated, not committed)
 ├── js/                             upstream TS package (scene v2 writer, bake reader, three helper)
 ├── app/                            Vite + React + Three.js editor
@@ -146,11 +146,14 @@ Before allocating, the engine estimates CPU and GPU memory from atlas pages, cov
 triangles; if a limit (adapter limits, a wasm heap budget, e.g. 1.5 GiB) would be exceeded it
 fails with `limit-exceeded` and a suggestion (lower texel density, smaller pages, fewer bounces).
 
-## 4. UV unwrapping (`crates/lightbaker-uv`)
+## 4. UV unwrapping (`lightbaker::unwrap`, `crates/lightbaker-uv`)
 
-- `Unwrapper` trait; implementations: `Planar` (wraps upstream `layout.rs`), `Xatlas` (native:
-  FFI over vendored xatlas; web: `xatlas-wasm` in the worker through a JS adapter imported by
-  `lightbaker-web`, ADR-0006). Both xatlas paths use the same xatlas commit and options.
+- The contract lives in the engine, `lightbaker::unwrap` (the engine depends on no crate of ours):
+  `Unwrapper` trait, `MeshInput`/`UnwrapOptions`/`UnwrappedTile`, and `check_uvs` (the UV validity
+  checks, same rules as `app/src/bake/uvValidity.ts`). Implementations: planar (upstream `layout.rs`),
+  `lightbaker_uv::XatlasUnwrapper` (native: FFI over vendored xatlas, built with `cc`; nothing on wasm32)
+  and, in the browser, `xatlas-wasm` in the worker through a JS adapter imported by `lightbaker-web`
+  (ADR-0006). Both xatlas paths use the same xatlas commit and options.
 - Xatlas per **object tile**: `addMesh` (world-space positions, normals, indices, material ids so
   charts never span materials), `computeCharts`, `packCharts` (texels per unit, padding,
   `resolution = 0` for an auto-sized tile rectangle), output UVs + `xref` + index remap + chart ids.

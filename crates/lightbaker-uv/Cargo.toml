@@ -1,0 +1,17 @@
+[package]
+name = "lightbaker-uv"
+description = "Lightmap UVs for lightbaker: xatlas (vendored, jpcy/xatlas f700c77) behind the engine's unwrap contract"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+lightbaker = { path = "../lightbaker", default-features = false }
+
+[build-dependencies]
+cc.workspace = true
+
+[dev-dependencies]
+glam.workspace = true

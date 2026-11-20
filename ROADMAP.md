@@ -112,7 +112,7 @@ Requirements: REQ-WASM-01 … 04, -06, -07, -08 (basic), -10; REQ-ENG-05 (first 
       via UVs; `charts` binding removed; planar layout emits per-triangle UVs; Rust↔WGSL layout
       tests; metrics of `upstream-basic` unchanged (ADR-0004). Bump `BAKER_VERSION`.
 - [x] **P3.4** `uv-space-raster` — Rasterise from UVs; interpolated vertex normals.
-- [ ] **P3.5** `xatlas-native` — `crates/lightbaker-uv` with vendored `jpcy/xatlas@f700c77` + FFI;
+- [x] **P3.5** `xatlas-native` — `crates/lightbaker-uv` with vendored `jpcy/xatlas@f700c77` + FFI;
       `Unwrapper` trait; UV validity test suite (TESTING.md).
 - [ ] **P3.6** `xatlas-web` — JS adapter over `xatlas-wasm` imported by `lightbaker-web`; UV validity
       suite in the browser path; native/web equivalence test.

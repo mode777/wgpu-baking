@@ -662,6 +662,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "lightbaker-uv"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "cc",
+ "glam",
+ "lightbaker",
+]
+
+[[package]]
 name = "lightbaker-web"
 version = "0.1.0"
 dependencies = [

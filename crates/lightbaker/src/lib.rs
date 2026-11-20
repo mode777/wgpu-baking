@@ -19,6 +19,7 @@ pub mod par;
 pub mod progress;
 pub mod raster;
 pub mod scene;
+pub mod unwrap;
 pub mod volume;
 
 pub use bake::{Bake, Options, bake};

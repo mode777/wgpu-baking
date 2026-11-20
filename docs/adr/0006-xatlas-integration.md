@@ -28,10 +28,12 @@ The brief asks to integrate xatlas into the Rust baking pipeline. Findings
 
 ## Decision
 
-1. **Crate `lightbaker-uv`** defines the `Unwrapper` contract used by the Rust pipeline
+1. **The engine (`lightbaker::unwrap`)** defines the `Unwrapper` contract used by the Rust pipeline
    (input per object tile: world-space positions, normals, indices, material ids; options: texels
    per metre, padding, chart options; output: per-vertex UVs in tile texels, `xref`, new indices,
-   chart ids, tile rectangle size).
+   chart ids, tile rectangle size) and the UV validity checks. (Originally planned in `lightbaker-uv`;
+   moved so `lightbaker` keeps depending on no crate of ours, P3.5.) `lightbaker-uv` holds the native
+   implementation.
 2. **Native:** own small FFI wrapper over the xatlas C API, compiled with `cc` from a **vendored
    copy of `jpcy/xatlas` at `f700c77`** (MIT licence kept). Hand-written `extern "C"` declarations
    (no `bindgen`/libclang).
@@ -119,3 +121,19 @@ P3.6: the UV validity suite passes natively and in the browser, with native/web 
     option for final bakes (`xatlas.bruteForcePacking`).
 
 **Conclusion:** keep the decision; no fallback (watlas / own Emscripten build) needed.
+
+## Native implementation (P3.5)
+
+`crates/lightbaker-uv`: `vendor/xatlas/` (`xatlas.cpp`, `xatlas.h`, `xatlas_c.h`, `LICENSE`, unmodified
+`jpcy/xatlas` @ `f700c77`), `build.rs` compiling it with `cc` as C++17 with `XATLAS_C_API=1`,
+`XA_MULTITHREADED=0` (as `xatlas-wasm`) and `-O2` even in debug builds; nothing is compiled for wasm32.
+Hand-written `#[repr(C)]` mirrors in `src/ffi.rs`, checked against the C++ compiler's `sizeof` by a test
+(`src/probe.cpp`). `XatlasUnwrapper` implements `lightbaker::unwrap::Unwrapper`: one atlas per tile, chart
+options only override xatlas' defaults when set, packing with `resolution = 0`, `bilinear`, the requested
+padding and `texelsPerUnit`; the atlas is destroyed however the call ends; more than one atlas is an error.
+
+Validity suite (`crates/lightbaker-uv/tests/validity.rs`): a 2 m quad (one chart, tile 32–40 texels at
+16 texels/m), a box with three materials (no mixed charts), each `upstream-basic` mesh and all of them in one
+tile, a UV sphere, a 16 384-triangle torus knot (unwrapped twice: identical) — all checks pass and median
+chart density is within ±20 % of the request (upstream-basic's sub-texel strip has no chart big enough to
+measure). The torus knot takes ≈ 2 s natively, like the wasm build: chart computation dominates on both.

@@ -60,6 +60,6 @@
     "version": "f700c77",
     "license": "MIT, Copyright (c) 2018-2020 Jonathan Young (see the package NOTICE)",
     "source": "https://github.com/jpcy/xatlas",
-    "notes": "compiled to wasm by xatlas-wasm"
+    "notes": "compiled to wasm by xatlas-wasm; vendored unmodified in crates/lightbaker-uv/vendor/xatlas/ (with its LICENSE) for the native unwrapper"
   }
 ]

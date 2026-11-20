@@ -61,7 +61,7 @@ This repository uses **OpenSpec** (`openspec/`, CLI `openspec`, prompts in `.git
 ```
 crates/lightbaker/        upstream core: layout, BVH, raster, GPU passes, filters, output (platform-agnostic)
 crates/lightbaker-cli/    upstream native CLI
-crates/lightbaker-uv/     Unwrapper contract + native xatlas FFI (new; web uses xatlas-wasm in the worker)
+crates/lightbaker-uv/     native xatlas FFI behind lightbaker::unwrap (web uses xatlas-wasm in the worker)
 crates/lightbaker-web/    wasm-bindgen bridge, browser GPU init, progress/cancel (new)
 js/                       upstream TS package: scene writer / bake reader (extended, dependency-free)
 app/                      React + Vite + Three.js editor (new)

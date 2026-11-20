@@ -13,7 +13,7 @@ concurrency:
 env:
   CARGO_TERM_COLOR: always
   # Crates linted with `clippy -D warnings`. Upstream crates are not linted (ADR-0001); new crates are added here.
-  CLIPPY_CRATES: "lightbaker-web"
+  CLIPPY_CRATES: "lightbaker-web lightbaker-uv"
 
 jobs:
   rust-native:
@@ -53,6 +53,8 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Build lightbaker for wasm32 (web feature)
         run: cargo build -p lightbaker --target wasm32-unknown-unknown --no-default-features --features web --locked
+      - name: lightbaker-uv builds for wasm32 (contract only; no C++ on the web)
+        run: cargo build -p lightbaker-uv --target wasm32-unknown-unknown --locked
       - name: No blocking executor, threads or C compression on the web path (ADR-0003)
         shell: bash
         run: |

@@ -11,7 +11,7 @@ at that phase.
 | Rust (rustup) | **1.99.1** (≥ 1.87 for wgpu 30) | engine, CLI, bridge | pinned in `rust-toolchain.toml` with clippy, rustfmt and the wasm32 target; rustup installs it on first `cargo` call |
 | `wasm32-unknown-unknown` target | — | browser build | installed automatically via `rust-toolchain.toml` |
 | `wasm-bindgen-cli` / `wasm-pack` | matching the `wasm-bindgen` crate version | JS bindings | version pinned in BUILD.md at P2 |
-| C++ compiler (MSVC / clang / gcc) | — | native xatlas (`cc`) | P3; the web path uses the prebuilt `xatlas-wasm` npm package (no Emscripten/clang needed) |
+| C++ compiler (MSVC / clang / gcc), C++17 | — | native xatlas (`cc`, `lightbaker-uv`) | needed by every native workspace build since P3.5 (`cargo build --workspace`; on Windows the VS Build Tools "Desktop development with C++" workload, on Linux `g++`); wasm32 builds compile no C++ — the web path uses the prebuilt `xatlas-wasm` npm package (no Emscripten/clang needed) |
 | Node.js | ≥ 22 LTS | app, tests | |
 | pnpm | ≥ 9 (via `corepack enable`) | JS workspace | |
 | Chromium-based browser | Chrome/Edge ≥ 113 | WebGPU baking | see RESEARCH.md §4 |
