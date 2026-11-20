@@ -33,7 +33,10 @@ fn upstream_basic_bakes_reproducibly_and_meets_its_expectations() {
     let scene = Scene::read(&std::fs::read(dir.join(&expect.scene)).unwrap()).unwrap();
     let log = |_: &str| {};
     let opts = Options { cache: None, log: &log };
+    gpu.reset_transfers();
     let first = bake(&scene, &gpu, &opts).unwrap();
+    let t = gpu.transfers();
+    assert!(t.batches > 0 && t.readbacks == t.batches && t.readback_bytes > 0 && t.upload_bytes > 0, "{t:?}");
     let second = bake(&scene, &gpu, &opts).unwrap();
     assert!(output::write(&scene, &first).unwrap() == output::write(&scene, &second).unwrap(), "two bakes of the same scene differ");
 

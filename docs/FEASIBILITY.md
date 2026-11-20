@@ -56,7 +56,7 @@ Witness article URLs given are wrong.
 | B2 | `gpu/mod.rs` `Gpu::run` | `std::sync::mpsc::channel` + `device.poll(PollType::wait_indefinitely())` + `rx.recv()` | `poll` does not wait on the web; `recv()` blocks forever → deadlock | `map_async` + `futures` oneshot `.await`; native polls first |
 | B3 | `gpu/mod.rs` `open` | `InstanceDescriptor::new_without_display_handle_from_env()` | Environment-driven backend selection | explicit `Backends::BROWSER_WEBGPU` on web; report `isFallbackAdapter` |
 | B4 | `bake.rs` (`Instant::now` ×3+), `volume.rs` | `std::time::Instant` | Panics ("time not implemented") | `web-time` |
-| B5 | `bake.rs` (`par_iter`, `par_iter_mut` ×5), `deps.rs` (`par_iter`) | `rayon` | No threads without SharedArrayBuffer/COOP+COEP | `par` shim: rayon on native, sequential on web |
+| B5 | `bake.rs` (`par_iter` ×3, `par_iter_mut` ×1), `deps.rs` (`par_iter` ×1) — 5 uses in total (verified P1.5) | `rayon` | No threads without SharedArrayBuffer/COOP+COEP | `par` shim: rayon on native, sequential on web |
 | B6 | `cache.rs` | `std::fs::{create_dir_all, read, write, rename}` | No filesystem | `TileStore` trait |
 | B7 | `cache.rs`, `encode.rs` | `zstd` (→ `zstd-sys`, C) | C library; needs a libc for wasm32 | gate to `native`; web: KTX2 without supercompression (already readable by `js/src/ktx2.ts`) |
 | B8 | `bake()` call chain | synchronous API | Every GPU readback is async on the web | `bake` becomes `async` (CLI and tests use `block_on`) |
@@ -106,6 +106,11 @@ to `minStorageBufferOffsetAlignment` (256) ✓.
 
 **Readbacks.** Every batch reads back its results (Direct: per 65 536 texels; Gather: per 16 384
 texels per bounce; Volume: per 8 192 probes), and the `light` atlas is re-uploaded each bounce.
+Measured in P1.5 ([phase-1-baseline.md](reports/phase-1-baseline.md)): every `Gpu::run` call
+re-uploads its whole `texels` array (64 B each) and the `light` atlas (16 B/texel; a 16 B placeholder
+for the Direct pass); one readback per batch. `upstream-basic`: 7 readbacks (1.85 MiB), 15.3 MiB
+uploaded; a 2048×924 variant with 3 bounces: 72 readbacks (30 MiB), 235 MiB uploaded. The device is
+requested with `adapter.limits()` (all of the adapter's limits); P2.2 replaces this with explicit limits.
 Acceptable for Phase 2 (correctness first). Phase 6 target: keep `light` and gather results on the
 GPU, run fill/smooth as compute passes, read back only the final atlas (REQ-WASM-05).
 

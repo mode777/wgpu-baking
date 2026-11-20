@@ -1,0 +1,131 @@
+{
+  "adapter": "Intel(R) Graphics (Vulkan)",
+  "peakMemoryKiB": null,
+  "runs": 5,
+  "scenes": [
+    {
+      "atlas": [
+        1024,
+        180
+      ],
+      "lightAtlasBytes": 2949120,
+      "log": [
+        "538 triangles, 29 charts in 16 tiles, atlas 1024x180, BVH 293 nodes (0.0 s)",
+        "16 of 16 tiles to bake",
+        "sun and occlusion: 71439 texels, 0.0 s",
+        "charts baked: 29, without a texel: 0, all inside solids: 0",
+        "bounce 1: 18518 texels x 256 rays, 0.0 s",
+        "bounce 2: 18518 texels x 256 rays, 0.0 s",
+        "volume 33x3x33: 3267 probes baked, 0.0 s"
+      ],
+      "scene": "upstream-basic",
+      "stages": [
+        [
+          "layout + BVH + GPU scene upload",
+          0.4102
+        ],
+        [
+          "tile hashes + cache lookup",
+          1.7717
+        ],
+        [
+          "rasterise + direct pass (GPU)",
+          15.900999999999998
+        ],
+        [
+          "uncovered-chart check",
+          0.6641
+        ],
+        [
+          "CPU per-tile direct (sun field, AO, filters) + bounce 1 gather (GPU)",
+          22.973899999999997
+        ],
+        [
+          "bounce 2 gather (GPU)",
+          11.4464
+        ],
+        [
+          "volume (GPU)",
+          6.7507
+        ],
+        [
+          "atlas assembly (after the last log line)",
+          4.6231
+        ]
+      ],
+      "totalMs": 64.57050000000001,
+      "transfers": {
+        "batches": 7,
+        "readbackBytes": 1944688,
+        "readbacks": 7,
+        "uploadBytes": 16036048
+      },
+      "triangles": 538
+    },
+    {
+      "atlas": [
+        2048,
+        924
+      ],
+      "lightAtlasBytes": 30277632,
+      "log": [
+        "538 triangles, 29 charts in 16 tiles, atlas 2048x924, BVH 293 nodes (0.0 s)",
+        "16 of 16 tiles to bake",
+        "sun and occlusion: 1112074 texels, 0.1 s",
+        "charts baked: 29, without a texel: 0, all inside solids: 0",
+        "bounce 1: 280579 texels x 512 rays, 0.2 s",
+        "bounce 2: 280579 texels x 512 rays, 0.2 s",
+        "bounce 3: 280579 texels x 512 rays, 0.2 s",
+        "volume 33x3x33: 3267 probes baked, 0.0 s"
+      ],
+      "scene": "upstream-basic-dense",
+      "stages": [
+        [
+          "layout + BVH + GPU scene upload",
+          0.6239
+        ],
+        [
+          "tile hashes + cache lookup",
+          2.0763000000000003
+        ],
+        [
+          "rasterise + direct pass (GPU)",
+          197.4282
+        ],
+        [
+          "uncovered-chart check",
+          8.6294
+        ],
+        [
+          "CPU per-tile direct (sun field, AO, filters) + bounce 1 gather (GPU)",
+          404.8929
+        ],
+        [
+          "bounce 2 gather (GPU)",
+          162.9325
+        ],
+        [
+          "bounce 3 gather (GPU)",
+          159.8339
+        ],
+        [
+          "volume (GPU)",
+          8.861
+        ],
+        [
+          "atlas assembly (after the last log line)",
+          80.8882
+        ]
+      ],
+      "totalMs": 1060.6543,
+      "transfers": {
+        "batches": 72,
+        "readbackBytes": 31470064,
+        "readbacks": 72,
+        "uploadBytes": 246410080
+      },
+      "triangles": 538
+    }
+  ],
+  "software": false
+}

@@ -40,6 +40,7 @@ cargo run --release -p lightbaker-cli -- scene.lbscene --out baked/ --cache .lbc
 cargo test -p lightbaker                                                   # GPU tests skip without an adapter (see CI env vars below)
 cargo run --release -p lightbaker-cli -- test-scenes/upstream-basic/upstream-basic.lbscene --out baked/ --check   # bake a test scene and check its expect.json
 cargo run --release -p lightbaker --example export-upstream-basic -- --bake # regenerate test-scenes/upstream-basic (+ reference values)
+cargo run --release -p lightbaker --example baseline -- --json out.json  # phase-report measurements (stages, transfers)
 ```
 
 ## WASM engine

@@ -57,3 +57,9 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: GPU integration tests on lavapipe
         run: cargo test -p lightbaker --release --locked -- --nocapture
+      - name: Baseline measurements (informational; software adapter timings are not representative)
+        run: cargo run -p lightbaker --release --locked --example baseline -- --json baseline-lavapipe.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: baseline-lavapipe
+          path: baseline-lavapipe.json

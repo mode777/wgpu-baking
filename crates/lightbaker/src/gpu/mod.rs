@@ -1,6 +1,8 @@
 //! The GPU side: one device, the scene's buffers, and the three passes of trace.wgsl run in batches
 //! (each batch submitted and waited on, so no dispatch runs long enough for the driver to reset it).
 
+use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
+
 use anyhow::{Context, Result, anyhow};
 use bytemuck::{Pod, Zeroable};
 use wgpu::util::DeviceExt;
@@ -62,6 +64,17 @@ pub struct Gpu {
     pub adapter: String,
     /// A software (CPU) adapter such as lavapipe/llvmpipe, SwiftShader or WARP: usable only on explicit opt-in.
     pub software: bool,
+    transfers: [AtomicU64; 4],
+}
+
+/// What crossed between CPU and GPU since the last reset: dispatched batches, buffers read back and their bytes, bytes uploaded.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Transfers {
+    pub batches: u64,
+    pub readbacks: u64,
+    pub readback_bytes: u64,
+    pub upload_bytes: u64,
 }
 
 /// Software adapters by device type or by the names they report (ADR-0009).
@@ -134,7 +147,16 @@ impl Gpu {
         let pipelines = [pipeline("direct"), pipeline("gather"), pipeline("volume")];
         let software = is_software_adapter(&info.name, info.device_type);
         let adapter = format!("{} ({:?}{})", info.name, info.backend, if software { ", software" } else { "" });
-        Ok(Gpu { device, queue, layout, pipelines, adapter, software })
+        Ok(Gpu { device, queue, layout, pipelines, adapter, software, transfers: Default::default() })
+    }
+
+    pub fn transfers(&self) -> Transfers {
+        let [batches, readbacks, readback_bytes, upload_bytes] = self.transfers.each_ref().map(|c| c.load(Relaxed));
+        Transfers { batches, readbacks, readback_bytes, upload_bytes }
+    }
+
+    pub fn reset_transfers(&self) {
+        self.transfers.iter().for_each(|c| c.store(0, Relaxed));
     }
 
     pub fn scene(&self, bvh: &Bvh, materials: &[[f32; 4]], charts: &[[[f32; 4]; 2]]) -> SceneBuffers {
@@ -163,6 +185,7 @@ impl Gpu {
             let mut p = params;
             p.counts[3] = n as u32;
             p.atlas[2] = first as u32;
+            self.transfers[3].fetch_add(size_of::<Params>() as u64, Relaxed);
             let uniform = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor { label: Some("params"), contents: bytemuck::bytes_of(&p), usage: wgpu::BufferUsages::UNIFORM });
             let size = (n * pass.width() * 16) as u64;
             let result = self.device.create_buffer(&wgpu::BufferDescriptor { label: Some("out"), size, usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC, mapped_at_creation: false });
@@ -200,6 +223,9 @@ impl Gpu {
             self.device.poll(wgpu::PollType::wait_indefinitely()).map_err(|e| anyhow!("GPU: {e:?}"))?;
             rx.recv()?.map_err(|e| anyhow!("GPU read back: {e:?}"))?;
             out.extend_from_slice(bytemuck::cast_slice(&slice.get_mapped_range()?));
+            self.transfers[0].fetch_add(1, Relaxed);
+            self.transfers[1].fetch_add(1, Relaxed);
+            self.transfers[2].fetch_add(size, Relaxed);
             read.unmap();
             first += n;
         }
@@ -207,6 +233,7 @@ impl Gpu {
     }
 
     fn storage(&self, label: &str, contents: &[u8]) -> wgpu::Buffer {
+        self.transfers[3].fetch_add(contents.len() as u64, Relaxed);
         self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor { label: Some(label), contents, usage: wgpu::BufferUsages::STORAGE })
     }
 }

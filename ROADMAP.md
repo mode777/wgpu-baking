@@ -14,7 +14,7 @@ name in `code`), small enough to review. Requirement IDs refer to
 - Tick a task (`[x]`) in the same change that archives its OpenSpec change.
 - Performance targets are set at the end of Phase 2 from measurements, not guessed now.
 
-**Current phase: 1 — Understand and fork** (Phase 0 complete).
+**Current phase: 2 — WASM / WebGPU proof of concept** (Phase 1 complete: [report](docs/reports/phase-1-baseline.md)).
 
 ---
 
@@ -29,7 +29,7 @@ name in `code`), small enough to review. Requirement IDs refer to
 
 ---
 
-## Phase 1 — Understand and fork
+## Phase 1 — Understand and fork ✅
 
 **Goal:** a clean fork with reproducible native builds and a measured baseline.
 **Deliverable:** documented technical architecture (verified) and a working native baseline.
@@ -46,7 +46,7 @@ name in `code`), small enough to review. Requirement IDs refer to
 - [x] **P1.4** `upstream-test-scene` — Export upstream's `tests/bake.rs` scene to
       `test-scenes/upstream-basic/` (`.lbscene` + `expect.json` with its metrics) via a small example
       binary; CLI bakes it.
-- [ ] **P1.5** `phase-1-baseline` — Run upstream tests on a real GPU (not skipped), record adapter,
+- [x] **P1.5** `phase-1-baseline` — Run upstream tests on a real GPU (not skipped), record adapter,
       timings per stage, readback counts, memory; verify FEASIBILITY.md against the running code.
       Report: `docs/reports/phase-1-baseline.md`.
 

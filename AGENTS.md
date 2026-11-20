@@ -17,7 +17,7 @@ from it are in [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md).
 
 ## Current status
 
-**Phase 1 in progress.** Upstream lightbaker is imported with full history (remote `upstream`);
+**Phase 2 in progress** (Phase 1 complete, see [docs/reports/phase-1-baseline.md](docs/reports/phase-1-baseline.md)). Upstream lightbaker is imported with full history (remote `upstream`);
 its original README is [docs/UPSTREAM_README.md](docs/UPSTREAM_README.md).
 The active phase and its exit criteria are tracked in [ROADMAP.md](ROADMAP.md).
 
