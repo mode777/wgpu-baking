@@ -38,6 +38,8 @@ pnpm install                                           # (P2) at the repository 
 cargo build --release -p lightbaker-cli                                    # (P1)
 cargo run --release -p lightbaker-cli -- scene.lbscene --out baked/ --cache .lbcache/   # (P1, upstream usage)
 cargo test -p lightbaker                                                   # GPU tests skip without an adapter (see CI env vars below)
+cargo run --release -p lightbaker-cli -- test-scenes/upstream-basic/upstream-basic.lbscene --out baked/ --check   # bake a test scene and check its expect.json
+cargo run --release -p lightbaker --example export-upstream-basic -- --bake # regenerate test-scenes/upstream-basic (+ reference values)
 ```
 
 ## WASM engine

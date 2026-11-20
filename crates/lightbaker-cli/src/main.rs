@@ -23,6 +23,9 @@ struct Args {
     /// say less
     #[arg(long, short)]
     quiet: bool,
+    /// after each bake, check it against the `expect.json` beside its scene (test-scenes/); fail if a check fails
+    #[arg(long)]
+    check: bool,
 }
 
 fn main() -> Result<()> {
@@ -50,6 +53,17 @@ fn main() -> Result<()> {
         let file = dir.join(format!("{name}.lbake"));
         std::fs::write(&file, output::write(&scene, &baked)?)?;
         println!("{name}: {} of {} tiles baked, {:.1} s -> {}", baked.stats.tiles_baked, baked.stats.tiles, started.elapsed().as_secs_f64(), file.display());
+        if args.check {
+            let path = path.with_file_name("expect.json");
+            let expect = lightbaker::expect::Expect::parse(&std::fs::read_to_string(&path).with_context(|| format!("reading {}", path.display()))?)?;
+            let report = expect.evaluate(&scene, &baked)?;
+            for o in &report.outcomes {
+                println!("  {} {}: {} vs {}", if o.passed { "ok  " } else { "FAIL" }, o.name, o.a, o.b);
+            }
+            let failed = report.outcomes.iter().filter(|o| !o.passed).count();
+            anyhow::ensure!(failed == 0, "{name}: {failed} of {} checks failed", report.outcomes.len());
+            println!("{name}: all {} checks passed", report.outcomes.len());
+        }
     }
     Ok(())
 }

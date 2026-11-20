@@ -10,6 +10,7 @@ pub mod bvh;
 pub mod cache;
 pub mod deps;
 pub mod encode;
+pub mod expect;
 pub mod filter;
 pub mod gpu;
 pub mod layout;

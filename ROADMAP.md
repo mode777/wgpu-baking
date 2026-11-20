@@ -43,7 +43,7 @@ name in `code`), small enough to review. Requirement IDs refer to
 - [x] **P1.3** `ci-native` — GitHub Actions (ADR-0009): `rust-native` (build, unit tests, clippy
       for new crates; Ubuntu + Windows) and `rust-gpu` (Ubuntu + `mesa-vulkan-drivers`/lavapipe,
       upstream GPU test with `LIGHTBAKER_REQUIRE_GPU=1`; add the env checks to the test helper).
-- [ ] **P1.4** `upstream-test-scene` — Export upstream's `tests/bake.rs` scene to
+- [x] **P1.4** `upstream-test-scene` — Export upstream's `tests/bake.rs` scene to
       `test-scenes/upstream-basic/` (`.lbscene` + `expect.json` with its metrics) via a small example
       binary; CLI bakes it.
 - [ ] **P1.5** `phase-1-baseline` — Run upstream tests on a real GPU (not skipped), record adapter,
