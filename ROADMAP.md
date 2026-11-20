@@ -74,7 +74,7 @@ the browser on WebGPU. **Deliverable:** browser PoC page baking `upstream-basic`
       later `wasm-pack build` and `wasm-bindgen-test` (Node).
 - [x] **P2.4** `wasm-bridge` — `crates/lightbaker-web`: `capabilities()`, `WebBaker::create/bake/cancel`,
       progress callback, typed errors, device-lost callback (INTERFACES.md §7–8).
-- [ ] **P2.5** `browser-poc` — Minimal `app/` (Vite, no React editor yet): baker worker (ADR-0002),
+- [x] **P2.5** `browser-poc` — Minimal `app/` (Vite, no React editor yet): baker worker (ADR-0002),
       loads `upstream-basic.lbscene`, bakes, shows adapter info, progress, timings and the
       direct/indirect textures on a simple Three.js view.
 - [ ] **P2.6** `browser-ci` — CI `web` job (lavapipe + xvfb, Chrome WebGPU flags) with the first

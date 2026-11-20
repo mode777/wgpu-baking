@@ -160,6 +160,11 @@ fails with `limit-exceeded` and a suggestion (lower texel density, smaller pages
 
 ## 6. Application (`app/`)
 
+Phase 2 (P2.5) state: a single PoC page (`app/index.html`, `src/main.ts`) with the baker worker
+(`src/bake/`: `protocol.ts`, `bakerCore.ts`, `baker.worker.ts`, `client.ts`) and an unlit Three.js
+lightmap view (`src/view/lightmapView.ts`). The editor described below starts in Phase 5 and reuses
+`src/bake/`.
+
 - **Startup:** capability check in the worker → banner if WebGPU baking is unavailable (the editor
   still works for scene building and unbaked preview).
 - **Document model:** `SceneDocument` (INTERFACES.md §2) in a Zustand store; all edits are

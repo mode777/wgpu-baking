@@ -64,12 +64,25 @@ Versions (P2.4): `wasm-bindgen` 0.2.130 (from `Cargo.lock`; wasm-pack 0.15.1 ins
 
 ## App
 
+Phase 2 PoC (P2.5): `app/` is a minimal Vite + TypeScript + Three.js page (no React yet) that bakes
+`test-scenes/upstream-basic` in a module worker. The wasm package is used through a Vite alias to
+`crates/lightbaker-web/pkg`, so **build it first** (the app's typecheck reads its `.d.ts`).
+
 ```powershell
-pnpm -C app dev          # (P2) Vite dev server; open the printed URL in Chrome/Edge
-pnpm -C app build        # (P2) production build in app/dist
-pnpm -C app test         # (P2) Vitest
-pnpm -C app e2e          # (P2) small Playwright set (Chrome with WebGPU enabled), see TESTING.md
+pnpm install                 # root: pnpm workspace (js, app)
+pnpm -C js test              # verified P2.5: readScene/writeScene (Vitest)
+pnpm -C app build:wasm       # verified P2.5: wasm-pack → crates/lightbaker-web/pkg
+pnpm -C app typecheck        # verified P2.5
+pnpm -C app test             # verified P2.5: worker protocol with a fake bridge (Vitest)
+pnpm -C app dev              # Vite dev server; open the printed URL in Chrome/Edge
+pnpm -C app build            # verified P2.5: production build in app/dist
+pnpm -C app e2e              # (P2.6) small Playwright set (Chrome with WebGPU enabled), see TESTING.md
+node app/scripts/hw-check.mjs   # manual real-GPU check (run in app/ after build): bake, cancel, rebake → JSON
 ```
+
+Page URL parameters: `allowFallbackAdapter=1` (bake on a software adapter; labelled), `profile=ci`
+(fewer rays for software adapters), `autobake=1`. `hw-check.mjs --browser-arg
+--use-webgpu-adapter=swiftshader` forces Chrome's software adapter to check the refusal path.
 
 WebGPU in automated Chrome needs flags. The Playwright config (P2) uses the set proven in three.js'
 CI: `--enable-unsafe-webgpu --enable-features=Vulkan --disable-vulkan-surface

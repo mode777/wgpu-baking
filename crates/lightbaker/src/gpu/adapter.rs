@@ -94,6 +94,20 @@ impl GrantedLimits {
 }
 
 impl AdapterReport {
+    /// Completes a report with what the browser tells about its adapter (`GPUAdapterInfo`), which wgpu does
+    /// not pass on: a name when wgpu has none, and software detection by vendor/architecture (Chrome need
+    /// not flag lavapipe or SwiftShader as `isFallbackAdapter`).
+    pub fn apply_browser_info(&mut self, vendor: &str, architecture: &str, description: &str, is_fallback: bool) {
+        let label = [vendor, architecture, description].iter().filter(|s| !s.is_empty()).copied().collect::<Vec<_>>().join(" ");
+        if self.name.is_empty() {
+            self.name = if label.is_empty() { "unnamed WebGPU adapter".into() } else { label.clone() };
+        }
+        if self.driver.is_empty() {
+            self.driver = label.clone();
+        }
+        self.software |= is_fallback || is_software_adapter(&label, wgpu::DeviceType::Other);
+    }
+
     pub fn new(info: &wgpu::AdapterInfo, limits: &wgpu::Limits) -> AdapterReport {
         AdapterReport {
             name: info.name.clone(),
@@ -179,6 +193,25 @@ mod tests {
         let e = g.check_storage("light", (128 << 20) + 16).unwrap_err();
         assert!(matches!(e, GpuError::LimitExceeded { limit_name: "maxStorageBufferBindingSize", .. }), "{e}");
         assert!(matches!(g.check_storage("texels", 300 << 20), Err(GpuError::LimitExceeded { limit_name: "maxBufferSize", .. })));
+    }
+
+    #[test]
+    fn browser_info_names_and_flags_software() {
+        let limits = GrantedLimits { max_storage_buffer_binding_size: 1, max_buffer_size: 1, max_compute_workgroups_per_dimension: 1 };
+        let blank = AdapterReport { name: String::new(), vendor: 0, device: 0, device_type: "Other".into(), backend: "BrowserWebGpu".into(), driver: String::new(), driver_info: String::new(), software: false, limits };
+        let mut intel = blank.clone();
+        intel.apply_browser_info("intel", "xe-3lpg", "", false);
+        assert_eq!((intel.name.as_str(), intel.software), ("intel xe-3lpg", false));
+        let mut lavapipe = blank.clone();
+        lavapipe.apply_browser_info("mesa", "llvmpipe", "", false);
+        assert!(lavapipe.software, "lavapipe without isFallbackAdapter is still software");
+        let mut swiftshader = blank.clone();
+        swiftshader.apply_browser_info("google", "swiftshader", "", false);
+        assert!(swiftshader.software);
+        let mut fallback = blank.clone();
+        fallback.apply_browser_info("", "", "", true);
+        assert!(fallback.software);
+        assert_eq!(fallback.name, "unnamed WebGPU adapter");
     }
 
     #[test]

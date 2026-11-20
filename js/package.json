@@ -4,6 +4,17 @@
   "description": "lightbaker's scene writer and bake reader: no dependencies, browser and Node",
   "private": true,
   "type": "module",
-  "exports": { ".": "./src/index.ts" },
-  "license": "MIT"
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "license": "MIT",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.1"
+  }
 }

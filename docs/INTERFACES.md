@@ -224,6 +224,16 @@ export type BakerError =
 Large arrays are sent as transferables. One bake at a time per worker; a new `bake` while one runs
 is rejected (`internal`) — the UI cancels first.
 
+Implemented subset (P2.5, `app/src/bake/protocol.ts`): `init` carries `allowFallbackAdapter`; after
+`capabilities` the worker sends `{ type: 'ready'; adapter }` when it opened its device, or an `error`
+without `jobId` (`no-webgpu`, `fallback-adapter-refused`, …); `bake` carries `config` (partial
+`BakeConfig`) and optional `expect` (an `expect.json` string) — `done.result` is the bridge output
+(§8) plus `checks` when `expect` was given, and `done.elapsedMs`; `progress` carries `bounce` and
+`elapsedMs` (no `etaMs`, `preview` or `unwrap` yet). Device loss arrives as an `error` with kind
+`device-lost`. The protocol logic is `app/src/bake/bakerCore.ts` (tested with a fake bridge).
+The browser's `GPUAdapterInfo` (vendor, architecture) completes the adapter report and also decides
+whether it is a software adapter (Chrome need not set `isFallbackAdapter` for lavapipe).
+
 ## 8. WASM bridge (`crates/lightbaker-web`, Rust side)
 
 Implemented in P2.4 (`wasm-pack build crates/lightbaker-web --target web` → `pkg/`); JS names in

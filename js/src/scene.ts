@@ -85,3 +85,30 @@ export function writeScene(header: SceneHeader, positions: readonly Float32Array
   }
   return out;
 }
+
+export interface Scene {
+  header: SceneHeader;
+  /** per mesh: its vertices (x y z, three a triangle), views into the file's bytes where aligned */
+  positions: Float32Array[];
+}
+
+/** Reads a scene file written by `writeScene` or by the Rust engine. */
+export function readScene(bytes: Uint8Array): Scene {
+  const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  if (bytes.length < 12 || String.fromCharCode(...bytes.subarray(0, 4)) !== 'LBSC') throw new Error('scene: not a lightbaker scene');
+  const version = dv.getUint32(4, true);
+  if (version !== SCENE_VERSION) throw new Error(`scene: format ${version}, this reader reads ${SCENE_VERSION}`);
+  const len = dv.getUint32(8, true);
+  if (12 + len > bytes.length) throw new Error('scene: header cut short');
+  const header = JSON.parse(new TextDecoder().decode(bytes.subarray(12, 12 + len))) as SceneHeader;
+  let at = align4(12 + len);
+  const positions = header.meshes.map((m) => {
+    const n = m.triangles * 9;
+    if (at + n * 4 > bytes.length) throw new Error(`scene: mesh ${m.name}: positions cut short`);
+    const p = (bytes.byteOffset + at) % 4 === 0 ? new Float32Array(bytes.buffer, bytes.byteOffset + at, n) : new Float32Array(bytes.slice(at, at + n * 4).buffer);
+    at = align4(at + n * 4);
+    return p;
+  });
+  if (at !== bytes.length) throw new Error(`scene: ${bytes.length - at} bytes after the last mesh`);
+  return { header, positions };
+}

@@ -12,10 +12,11 @@ use std::rc::Rc;
 use js_sys::{Float32Array, Function, Object, Promise, Reflect, Uint8Array};
 use lightbaker::cache::{MemoryStore, TileStore};
 use lightbaker::expect::Expect;
-use lightbaker::gpu::{AdapterReport, GpuOptions};
+use lightbaker::gpu::{AdapterReport, GpuOptions, admit};
 use lightbaker::progress::Progress;
 use lightbaker::{Bake, Gpu, Options, Scene, bake, output};
 use serde::Serialize;
+use wasm_bindgen::JsCast;
 use wasm_bindgen::prelude::*;
 
 pub use errors::BakerError;
@@ -100,18 +101,82 @@ pub async fn capabilities() -> Result<JsValue, JsValue> {
             reason: Some(reason),
         }));
     }
+    let browser = browser_adapter_info().await;
     Ok(to_js(&match Gpu::probe().await {
-        Ok(report) => Capabilities {
-            webgpu: true,
-            adapter: Some(AdapterCaps::new(report)),
-            reason: None,
-        },
+        Ok(mut report) => {
+            if let Some(b) = &browser {
+                b.apply(&mut report);
+            }
+            Capabilities {
+                webgpu: true,
+                adapter: Some(AdapterCaps::new(report)),
+                reason: None,
+            }
+        }
         Err(e) => Capabilities {
             webgpu: false,
             adapter: None,
             reason: Some(format!("{e:#}")),
         },
     }))
+}
+
+/// What the browser says about the adapter a bake would get (`GPUAdapterInfo`): vendor, architecture,
+/// description, `isFallbackAdapter`. wgpu passes on only the description and the fallback flag.
+struct BrowserAdapterInfo {
+    vendor: String,
+    architecture: String,
+    description: String,
+    is_fallback: bool,
+}
+
+impl BrowserAdapterInfo {
+    fn apply(&self, report: &mut AdapterReport) {
+        report.apply_browser_info(
+            &self.vendor,
+            &self.architecture,
+            &self.description,
+            self.is_fallback,
+        );
+    }
+}
+
+async fn browser_adapter_info() -> Option<BrowserAdapterInfo> {
+    let navigator = Reflect::get(&js_sys::global(), &"navigator".into()).ok()?;
+    let gpu = Reflect::get(&navigator, &"gpu".into()).ok()?;
+    let request: Function = Reflect::get(&gpu, &"requestAdapter".into())
+        .ok()?
+        .dyn_into()
+        .ok()?;
+    let opts = Object::new();
+    Reflect::set(&opts, &"powerPreference".into(), &"high-performance".into()).ok()?;
+    let promise: Promise = request.call1(&gpu, &opts).ok()?.dyn_into().ok()?;
+    let adapter = wasm_bindgen_futures::JsFuture::from(promise)
+        .await
+        .ok()
+        .filter(|a| !a.is_null() && !a.is_undefined())?;
+    let info = Reflect::get(&adapter, &"info".into())
+        .ok()
+        .filter(|i| !i.is_undefined())?;
+    let text = |k: &str| {
+        Reflect::get(&info, &k.into())
+            .ok()
+            .and_then(|v| v.as_string())
+            .unwrap_or_default()
+    };
+    // older browsers keep the flag on the adapter rather than on its info
+    let flag = |o: &JsValue| {
+        Reflect::get(o, &"isFallbackAdapter".into())
+            .ok()
+            .and_then(|v| v.as_bool())
+    };
+    let is_fallback = flag(&info).or_else(|| flag(&adapter)).unwrap_or(false);
+    Some(BrowserAdapterInfo {
+        vendor: text("vendor"),
+        architecture: text("architecture"),
+        description: text("description"),
+        is_fallback,
+    })
 }
 
 struct Inner {
@@ -137,11 +202,32 @@ impl WebBaker {
         if let Some(reason) = no_webgpu() {
             return Err(reject(BakerError::new("no-webgpu", reason)));
         }
-        let gpu = Gpu::open(&GpuOptions {
+        let options = GpuOptions {
             allow_software: allow_fallback_adapter,
-        })
-        .await
-        .map_err(|e| reject(BakerError::from_engine(&e)))?;
+        };
+        // the engine sees only what wgpu reports; the browser's vendor/architecture can reveal a software adapter too
+        let browser = browser_adapter_info().await;
+        if let Some(b) = &browser {
+            let mut probe = Gpu::probe()
+                .await
+                .map_err(|e| reject(BakerError::from_engine(&e)))?;
+            b.apply(&mut probe);
+            admit(&probe.name, probe.software, &options)
+                .map_err(|e| reject(BakerError::from_engine(&e.into())))?;
+        }
+        let mut gpu = Gpu::open(&options)
+            .await
+            .map_err(|e| reject(BakerError::from_engine(&e)))?;
+        if let Some(b) = &browser {
+            b.apply(&mut gpu.report);
+            gpu.software = gpu.report.software;
+            gpu.adapter = format!(
+                "{} ({}{})",
+                gpu.report.name,
+                gpu.report.backend,
+                if gpu.software { ", software" } else { "" }
+            );
+        }
         let lost = gpu.take_device_lost();
         let inner = Rc::new(Inner {
             gpu,

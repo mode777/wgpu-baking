@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>wgpu-baking — browser bake PoC</title>
+    <style>
+      :root { font: 14px/1.4 system-ui, sans-serif; color-scheme: dark; }
+      body { margin: 0; display: grid; grid-template-columns: 380px 1fr; height: 100vh; background: #15171a; color: #ddd; }
+      aside { padding: 12px 14px; overflow: auto; border-right: 1px solid #333; }
+      h1 { font-size: 16px; margin: 0 0 8px; }
+      h2 { font-size: 13px; margin: 14px 0 4px; color: #9ab; text-transform: uppercase; letter-spacing: .04em; }
+      button { margin: 4px 6px 4px 0; padding: 4px 10px; }
+      .bad { color: #f77; } .good { color: #7d7; } .warn { color: #fc6; }
+      .software { display: inline-block; padding: 1px 6px; background: #a40; color: #fff; font-weight: bold; border-radius: 3px; }
+      table { border-collapse: collapse; width: 100%; font-size: 12px; }
+      td { padding: 1px 4px; border-bottom: 1px solid #2a2a2a; vertical-align: top; }
+      td.num { text-align: right; font-variant-numeric: tabular-nums; }
+      progress { width: 100%; }
+      #view { position: relative; }
+      #view canvas { display: block; width: 100%; height: 100%; }
+      #modes { position: absolute; top: 8px; left: 8px; background: #0008; padding: 4px 8px; border-radius: 4px; }
+      code { font-size: 12px; }
+    </style>
+  </head>
+  <body>
+    <aside>
+      <h1>Browser bake — proof of concept</h1>
+      <div>Scene: <code>test-scenes/upstream-basic</code> · profile <code id="profile"></code></div>
+
+      <h2>WebGPU</h2>
+      <div id="status" data-testid="status">checking…</div>
+      <div id="adapter" data-testid="adapter"></div>
+
+      <h2>Bake</h2>
+      <button id="bake" data-testid="bake" disabled>Bake</button>
+      <button id="cancel" data-testid="cancel" disabled>Cancel</button>
+      <label><input type="checkbox" id="reuse" data-testid="reuse" checked /> reuse baked tiles</label>
+      <div><progress id="bar" max="1" value="0"></progress></div>
+      <div id="progress" data-testid="progress"></div>
+      <div id="outcome" data-testid="outcome"></div>
+
+      <h2>Timings and transfers</h2>
+      <table id="timings" data-testid="timings"></table>
+
+      <h2>Checks (<code>expect.json</code>)</h2>
+      <div id="checks-summary" data-testid="checks-summary"></div>
+      <table id="checks" data-testid="checks"></table>
+
+      <h2>Warnings</h2>
+      <div id="warnings" data-testid="warnings">—</div>
+    </aside>
+    <main id="view" data-testid="view">
+      <div id="modes">
+        <label><input type="radio" name="mode" value="indirect" checked /> indirect</label>
+        <label><input type="radio" name="mode" value="sun" /> sun field</label>
+        <label><input type="radio" name="mode" value="ao" /> AO</label>
+      </div>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

@@ -10,6 +10,12 @@ assets) and rerun it whenever `Cargo.lock` or a package manifest changes.
 | Component | Version | Licence | Source | Notes |
 |---|---|---|---|---|
 | lightbaker (jer-nc/lightbaker) | 4fe85da | MIT, Copyright (c) 2026 Orbitoon | https://github.com/jer-nc/lightbaker | Forked engine, CLI, js/ package, docs/DESIGN.md, docs/FORMAT.md, docs/images/ |
+| three (npm) | 0.187.0 | MIT | https://github.com/mrdoob/three.js | app runtime: lightmap view (bundled into app/dist) |
+| vite (npm, dev) | 8.3.8 | MIT | https://github.com/vitejs/vite | app build/dev server |
+| vitest (npm, dev) | 5.1.1 | MIT | https://github.com/vitest-dev/vitest | js/ and app/ unit tests |
+| typescript (npm, dev) | 7.0.2 | Apache-2.0 | https://github.com/microsoft/TypeScript | typecheck |
+| @playwright/test (npm, dev) | 1.65.1 | Apache-2.0 | https://github.com/microsoft/playwright | browser checks (app/scripts/hw-check.mjs) and e2e |
+| @types/three, @types/node (npm, dev) | 0.187.0, 26.6.6 | MIT | https://github.com/DefinitelyTyped/DefinitelyTyped | type definitions |
 
 ## Rust crates (183, from Cargo.lock)
 
