@@ -37,7 +37,7 @@ name in `code`), small enough to review. Requirement IDs refer to
 - [x] **P1.1** `fork-baseline` — Initialise git here, add `upstream` remote (jer-nc/lightbaker),
       merge upstream history (`--allow-unrelated-histories`, since this folder already holds docs
       and `openspec/`), move upstream README to `docs/UPSTREAM_README.md` (ADR-0001).
-- [ ] **P1.2** `repo-hygiene` — `rust-toolchain.toml`, `.gitignore` additions (`pkg/`, `dist/`,
+- [x] **P1.2** `repo-hygiene` — `rust-toolchain.toml`, `.gitignore` additions (`pkg/`, `dist/`,
       `node_modules/`), `THIRD_PARTY_NOTICES.md`; `LICENSE`: keep upstream's MIT text and
       `Copyright (c) 2026 Orbitoon`, add `Copyright (c) 2026 The wgpu-baking contributors`.
 - [ ] **P1.3** `ci-native` — GitHub Actions (ADR-0009): `rust-native` (build, unit tests, clippy

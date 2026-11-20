@@ -1,0 +1,9 @@
+[
+  {
+    "name": "lightbaker (jer-nc/lightbaker)",
+    "version": "4fe85da",
+    "license": "MIT, Copyright (c) 2026 Orbitoon",
+    "source": "https://github.com/jer-nc/lightbaker",
+    "notes": "Forked engine, CLI, js/ package, docs/DESIGN.md, docs/FORMAT.md, docs/images/"
+  }
+]

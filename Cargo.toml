@@ -6,7 +6,7 @@ members = ["crates/lightbaker", "crates/lightbaker-cli"]
 version = "0.1.0"
 edition = "2024"
 license = "MIT"
-repository = "https://github.com/jer-nc/lightbaker"
+repository = "https://github.com/mode777/wgpu-baking"
 
 [workspace.dependencies]
 anyhow = "1"

@@ -2,3 +2,6 @@
 /js/node_modules
 *.lbake
 .lbcache/
+pkg/
+dist/
+node_modules/
