@@ -30,6 +30,8 @@ flate2.workspace = true
 
 [dev-dependencies]
 pollster.workspace = true
+# reflects trace.wgsl in the Rust/WGSL layout test (the version wgpu already uses)
+naga = { version = "30.0.1", features = ["wgsl-in"] }
 
 [[test]]
 name = "bake"

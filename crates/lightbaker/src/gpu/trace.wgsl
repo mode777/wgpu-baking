@@ -7,7 +7,9 @@
 //   volume: per probe (given as a texel: its position), the same over the whole sphere, projected on L1 spherical harmonics, and the sun
 
 struct Node { min: vec3f, first: u32, max: vec3f, count: u32 }
-struct Tri { v0: vec4f, e1: vec4f, e2: vec4f }
+// bvh.rs Tri (80 B): a corner and two edges (v0.w: material), the corners' lightmap UVs in atlas texels
+// (uv01: u0 v0 u1 v1; uv2: u2 v2, page as bits, NONE: not in the lightmap)
+struct Tri { v0: vec4f, e1: vec4f, e2: vec4f, uv01: vec4f, uv2: vec4f }
 struct Texel { pos: vec4f, normal: vec4f, dx: vec4f, dy: vec4f }
 struct Params {
   sun_dir: vec4f,      // xyz towards the sun, w: tan of the disc's radius
@@ -27,7 +29,6 @@ struct Params {
 @group(0) @binding(3) var<uniform> P: Params;
 @group(0) @binding(4) var<storage, read> texels: array<Texel>;
 @group(0) @binding(5) var<storage, read_write> out: array<vec4f>;
-@group(0) @binding(6) var<storage, read> charts: array<vec4f>;      // two rows a chart: atlas x and y of a world point
 @group(0) @binding(7) var<storage, read> light: array<vec4f>;       // per atlas texel: irradiance rgb, w: 1 where known
 
 const PI: f32 = 3.14159265;
@@ -36,7 +37,8 @@ const NONE: u32 = 0xffffffffu;
 // how far a texel inside thin geometry is pushed out to be sampled (m; bake.rs PUSH)
 const PUSH: f32 = 0.03;
 
-struct Hit { t: f32, tri: u32, back: bool }
+// the nearest hit: distance, triangle, whether its back faces the ray, barycentrics (p = v0 + u e1 + v e2)
+struct Hit { t: f32, tri: u32, back: bool, u: f32, v: f32 }
 
 fn pcg(v: u32) -> u32 {
   let s = v * 747796405u + 2891336453u;
@@ -81,7 +83,7 @@ fn box(o: vec3f, inv: vec3f, mn: vec3f, mx: vec3f, tmax: f32) -> f32 {
 
 // the nearest hit within tmax (any: the first found, for shadow rays)
 fn trace(o: vec3f, d: vec3f, tmax: f32, any: bool, ray: u32) -> Hit {
-  var hit = Hit(tmax, NONE, false);
+  var hit = Hit(tmax, NONE, false, 0.0, 0.0);
   let inv = 1.0 / select(d, vec3f(1e-12), abs(d) < vec3f(1e-12));
   var stack: array<u32, 48>;
   var sp = 0u;
@@ -103,7 +105,7 @@ fn trace(o: vec3f, d: vec3f, tmax: f32, any: bool, ray: u32) -> Hit {
         if (v < 0.0 || u + v > 1.0) { continue; }
         let t = dot(tr.e2.xyz, q) * id;
         if (t > 1e-4 && t < hit.t && stops(i, ray)) {
-          hit = Hit(t, i, det < 0.0);
+          hit = Hit(t, i, det < 0.0, u, v);
           if (any) { return hit; }
         }
       }
@@ -133,14 +135,12 @@ fn trace(o: vec3f, d: vec3f, tmax: f32, any: bool, ray: u32) -> Hit {
 fn bounced(o: vec3f, d: vec3f, h: Hit) -> vec3f {
   let tr = tris[h.tri];
   let albedo = materials[bitcast<u32>(tr.v0.w)].rgb;
-  let c = bitcast<u32>(tr.e1.w);
   var e = P.fallback.rgb;
-  if (c != NONE) {
-    let p = o + d * h.t;
-    let x = dot(charts[c * 2u], vec4f(p, 1.0));
-    let y = dot(charts[c * 2u + 1u], vec4f(p, 1.0));
-    let ix = clamp(i32(floor(x)), 0, i32(P.atlas.x) - 1);
-    let iy = clamp(i32(floor(y)), 0, i32(P.atlas.y) - 1);
+  if (bitcast<u32>(tr.uv2.z) != NONE) {
+    // the hit's lightmap texel: its corners' UVs interpolated (ADR-0004)
+    let uv = tr.uv01.xy * (1.0 - h.u - h.v) + tr.uv01.zw * h.u + tr.uv2.xy * h.v;
+    let ix = clamp(i32(floor(uv.x)), 0, i32(P.atlas.x) - 1);
+    let iy = clamp(i32(floor(uv.y)), 0, i32(P.atlas.y) - 1);
     let l = light[u32(iy) * P.atlas.x + u32(ix)];
     if (l.w > 0.5) { e = l.rgb; }
   }

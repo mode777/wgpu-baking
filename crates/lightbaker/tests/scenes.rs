@@ -173,3 +173,29 @@ fn upstream_basic_bakes_reproducibly_and_meets_its_expectations() {
     assert!(output::write(&scene, &again).unwrap() == output::write(&scene, &first).unwrap());
     assert!(output::write(&scene, &fresh).unwrap() == output::write(&scene, &first).unwrap());
 }
+
+/// The light stays what the reference bake (expect.json, recorded on the Intel iGPU with Vulkan) measured:
+/// within 2 % or 0.02 per probe value, so float-level changes (and software adapters) pass and regressions fail.
+#[test]
+fn upstream_basic_matches_its_reference_values() {
+    let Some(gpu) = gpu() else { return };
+    let dir = scenes_dir().join("upstream-basic");
+    let expect = Expect::parse(&std::fs::read_to_string(dir.join("expect.json")).unwrap()).unwrap();
+    let reference = expect.reference.clone().expect("expect.json has reference values");
+    let scene = Scene::read(&std::fs::read(dir.join(&expect.scene)).unwrap()).unwrap();
+    let baked = pollster::block_on(bake(&scene, &gpu, &Options::default())).unwrap();
+    let report = expect.evaluate(&scene, &baked).unwrap();
+    let mut worst = (0.0f32, String::new());
+    for (name, want) in &reference.values {
+        let got = report.values[name];
+        for i in 0..4 {
+            let err = (got[i] - want[i]).abs();
+            let allowed = (0.02f32).max(want[i].abs() * 0.02);
+            assert!(err <= allowed, "{name}[{i}]: {} vs reference {} ({})", got[i], want[i], reference.adapter);
+            if err > worst.0 {
+                worst = (err, format!("{name}[{i}]"));
+            }
+        }
+    }
+    eprintln!("largest difference from the reference: {} at {}", worst.0, worst.1);
+}

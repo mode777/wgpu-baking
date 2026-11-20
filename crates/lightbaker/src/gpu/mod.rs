@@ -97,7 +97,6 @@ pub struct SceneBuffers {
     nodes: wgpu::Buffer,
     tris: wgpu::Buffer,
     materials: wgpu::Buffer,
-    charts: wgpu::Buffer,
 }
 
 impl Gpu {
@@ -176,7 +175,7 @@ impl Gpu {
                 },
                 storage(4, true),
                 storage(5, false),
-                storage(6, true),
+                // 6 was upstream's per-chart affine maps: lightmap UVs now live in the triangles (ADR-0004)
                 storage(7, true),
             ],
         });
@@ -225,12 +224,11 @@ impl Gpu {
         self.transfers.iter().for_each(|c| c.store(0, Relaxed));
     }
 
-    pub fn scene(&self, bvh: &Bvh, materials: &[[f32; 4]], charts: &[[[f32; 4]; 2]]) -> Result<SceneBuffers> {
+    pub fn scene(&self, bvh: &Bvh, materials: &[[f32; 4]]) -> Result<SceneBuffers> {
         Ok(SceneBuffers {
             nodes: self.storage("nodes", bytemuck::cast_slice(&bvh.nodes))?,
             tris: self.storage("tris", bytemuck::cast_slice(&bvh.tris))?,
             materials: self.storage("materials", bytemuck::cast_slice(materials))?,
-            charts: self.storage("charts", bytemuck::cast_slice(if charts.is_empty() { &[[[0f32; 4]; 2]] } else { charts }))?,
         })
     }
 
@@ -274,7 +272,6 @@ impl Gpu {
                     entry(3, &uniform, 0, None),
                     entry(4, &texels, offset, tsize),
                     entry(5, &result, 0, None),
-                    entry(6, &scene.charts, 0, None),
                     entry(7, &light, 0, None),
                 ],
             });

@@ -85,6 +85,12 @@ impl Chart {
     }
 }
 
+/// An affine map's image of a point: its atlas texel coordinates.
+pub fn apply_affine(a: &[[f32; 4]; 2], p: Vec3) -> [f32; 2] {
+    let dot = |r: [f32; 4]| r[0] * p.x + r[1] * p.y + r[2] * p.z + r[3];
+    [dot(a[0]), dot(a[1])]
+}
+
 impl Layout {
     pub fn build(scene: &Scene) -> Result<Layout> {
         let s = &scene.header.lightmap;

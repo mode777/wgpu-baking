@@ -115,6 +115,10 @@ flowchart TD
 
 Rust `#[repr(C)]` structs and WGSL structs are kept identical and covered by layout tests.
 
+Status (P3.3): `tris` is 80 B with `uv01`/`uv2` (page written as 0; `e1.w` flags and `uv2.w` albedo
+reserved) and `bounced()` interpolates the hit's UV; binding 6 (`charts`) is removed and free for
+`lights` (P4.1). Layout test: `crates/lightbaker/tests/layout.rs` (naga reflection of `trace.wgsl`).
+
 ### 3.4 Incremental baking
 
 Two meanings, both supported:

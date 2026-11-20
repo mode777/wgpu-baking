@@ -1,6 +1,6 @@
 # ADR-0004: Per-triangle lightmap UVs and object tiles
 
-- **Status:** proposed (implemented in Phase 3)
+- **Status:** accepted — decision 1 implemented in P3.3; 2–5 in P3.4–P3.8
 - **Date:** 2026-11-20
 - **Phase:** 3
 - **Requirements:** REQ-UV-01 … 09, REQ-WASM-06
@@ -24,11 +24,13 @@ reach it (`deps.rs`).
 
 ## Decision
 
-1. **Per-triangle UVs on the GPU.** A new storage buffer `tri_uv: array<vec4f>` (two entries per
-   BVH triangle: `(u0,v0,u1,v1)`, `(u2,v2,page,_)` in atlas texel coordinates) replaces the
-   `charts` buffer. `trace()` returns the hit's barycentrics; `bounced()` interpolates the UV and
-   reads `light[page][…]`. The planar layout also emits per-triangle UVs (evaluating its affine
-   map at the vertices), so **both unwrappers share one downstream path**.
+1. **Per-triangle UVs on the GPU.** Each BVH triangle carries its corners' UVs and page in atlas texel
+   coordinates (`Tri` grows from 48 to 80 B: `uv01 = (u0,v0,u1,v1)`, `uv2 = (u2,v2,page,_)`), which
+   replaces the `charts` buffer. `trace()` returns the hit's barycentrics; `bounced()` interpolates the
+   UV and reads `light[page][…]`. The planar layout also emits per-triangle UVs (evaluating its affine
+   map at the vertices), so **both unwrappers share one downstream path**. *(Implemented in P3.3; UVs
+   live in `Tri` rather than the separate `tri_uv` buffer first planned — one fetch per hit, no extra
+   binding. `upstream-basic` probe values are unchanged.)*
 2. **Rasterisation in UV space.** `raster.rs` rasterises each triangle from its tile-local UVs
    (same conservative two-pass algorithm). Position, `dx`, `dy` come from the UV→world Jacobian;
    normals are interpolated when the mesh has vertex normals, else the face normal (upstream).

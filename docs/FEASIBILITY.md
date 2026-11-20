@@ -92,6 +92,7 @@ per-triangle albedo would exceed it. Plan:
   `uv2 (u2, v2, page, packed albedo RGB9E5/unorm)`. This **removes** the `charts` buffer (ADR-0004).
 - Lights in a **uniform** buffer (≤ 64 KiB: e.g. 256 lights × 64 B) or appended to `materials`.
 - Result: 7 storage + 1–2 uniform, within defaults.
+- Status (P3.3): `Tri` is 80 B, `charts` removed — 6 storage + 1 uniform today.
 
 **Buffer sizes vs. default limits** (`maxStorageBufferBindingSize` 128 MiB, `maxBufferSize` 256 MiB):
 

@@ -8,7 +8,7 @@ use crate::par::*;
 use crate::scene::Scene;
 
 /// Bump when the baker's results change for the same scene: every tile is baked again.
-pub const BAKER_VERSION: u32 = 11;
+pub const BAKER_VERSION: u32 = 12;
 
 /// A box, and how far it reaches.
 #[derive(Clone, Copy, Debug)]

@@ -108,7 +108,7 @@ Requirements: REQ-WASM-01 … 04, -06, -07, -08 (basic), -10; REQ-ENG-05 (first 
       record timings and memory in ADR-0006.
 - [x] **P3.2** `scene-format-v2` — `.lbscene` v2 in Rust and TS (indexed meshes, normals, material
       ids, colours, lightmap UVs); v1 still read; golden-file tests.
-- [ ] **P3.3** `per-triangle-uvs` — `Tri` 80 B with UVs/page; `trace()` barycentrics; `bounced()`
+- [x] **P3.3** `per-triangle-uvs` — `Tri` 80 B with UVs/page; `trace()` barycentrics; `bounced()`
       via UVs; `charts` binding removed; planar layout emits per-triangle UVs; Rust↔WGSL layout
       tests; metrics of `upstream-basic` unchanged (ADR-0004). Bump `BAKER_VERSION`.
 - [ ] **P3.4** `uv-space-raster` — Rasterise from UVs; interpolated vertex normals.

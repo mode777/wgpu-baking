@@ -21,15 +21,20 @@ pub struct Node {
     pub count: u32,
 }
 
-/// A triangle (48 bytes) as the rays meet it: a corner and the two edges from it.
+/// A triangle (80 bytes; trace.wgsl `Tri`) as the rays meet it: a corner and the two edges from it, and
+/// where its corners lie in the lightmap.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, Pod, Zeroable)]
 pub struct Tri {
     /// w: the material's index, as bits
     pub v0: [f32; 4],
-    /// w: the lightmap chart's index (u32::MAX: none), as bits
+    /// w: flags, reserved (0)
     pub e1: [f32; 4],
     pub e2: [f32; 4],
+    /// the corners' lightmap UVs in atlas texels: u0 v0 u1 v1
+    pub uv01: [f32; 4],
+    /// u2 v2, the page (as bits; u32::MAX: not in the lightmap), reserved
+    pub uv2: [f32; 4],
 }
 
 pub struct Bvh {
@@ -46,8 +51,9 @@ struct Prim {
 }
 
 impl Bvh {
-    /// Over every triangle whose material casts; `chart` gives a triangle's chart (mesh, triangle).
-    pub fn build(scene: &Scene, chart: impl Fn(usize, usize) -> u32) -> Bvh {
+    /// Over every triangle whose material casts; `uv` gives a triangle's (mesh, triangle) corners' lightmap UVs
+    /// in atlas texels and its page, if it is in the lightmap.
+    pub fn build(scene: &Scene, uv: impl Fn(usize, usize) -> Option<([[f32; 2]; 3], u32)>) -> Bvh {
         let mut prims = Vec::new();
         for (mi, m) in scene.header.meshes.iter().enumerate() {
             if !scene.header.materials[m.material as usize].casts {
@@ -60,14 +66,17 @@ impl Bvh {
                 if e1.cross(e2).length_squared() < 1e-14 {
                     continue;
                 }
+                let (uvs, page) = uv(mi, t).unwrap_or(([[0.0; 2]; 3], u32::MAX));
                 prims.push(Prim {
                     min: a.min(b).min(c),
                     max: a.max(b).max(c),
                     centre: (a + b + c) / 3.0,
                     tri: Tri {
                         v0: [a.x, a.y, a.z, f32::from_bits(m.material)],
-                        e1: [e1.x, e1.y, e1.z, f32::from_bits(chart(mi, t))],
+                        e1: [e1.x, e1.y, e1.z, 0.0],
                         e2: [e2.x, e2.y, e2.z, 0.0],
+                        uv01: [uvs[0][0], uvs[0][1], uvs[1][0], uvs[1][1]],
+                        uv2: [uvs[2][0], uvs[2][1], f32::from_bits(page), 0.0],
                     },
                 });
             }

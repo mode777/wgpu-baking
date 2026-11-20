@@ -13,7 +13,7 @@ use crate::cache::{Cache, Pack, TileStore, Unpack};
 use crate::deps::{Aabb, Boxes, global_hash, hash_reach};
 use crate::filter::{Surface, fill, smooth, sun_field};
 use crate::gpu::{Gpu, Params, Pass};
-use crate::layout::{Layout, TileKey};
+use crate::layout::{Layout, TileKey, apply_affine};
 use crate::raster::{Texel, rasterize};
 use crate::scene::Scene;
 use crate::progress::{Hooks, Phase, Progress};
@@ -118,9 +118,14 @@ pub async fn bake(scene: &Scene, gpu: &Gpu, o: &Options<'_>) -> Result<Bake> {
     let (aw, ah) = (layout.width as usize, layout.height as usize);
     let chart_tile = layout.chart_tile();
     let affines: Vec<[[f32; 4]; 2]> = layout.charts.iter().enumerate().map(|(i, c)| c.affine(&layout.tiles[chart_tile[i] as usize], layout.density, layout.padding)).collect();
-    let bvh = Bvh::build(scene, |m, t| layout.tri_chart[m][t]);
+    // planar charts give their triangles' corners lightmap UVs through their affine maps (ADR-0004); one page
+    let bvh = Bvh::build(scene, |m, t| {
+        let c = layout.tri_chart[m][t];
+        let p = &scene.positions[m][t * 3..t * 3 + 3];
+        (c != u32::MAX).then(|| (p.iter().map(|&v| apply_affine(&affines[c as usize], v)).collect::<Vec<_>>().try_into().unwrap(), 0))
+    });
     let materials: Vec<[f32; 4]> = h.materials.iter().map(|m| [m.albedo[0], m.albedo[1], m.albedo[2], m.opacity]).collect();
-    let buffers = gpu.scene(&bvh, &materials, &affines)?;
+    let buffers = gpu.scene(&bvh, &materials)?;
     let sun = Vec3::from_array(h.sun.direction).normalize();
     let sun_dir = sun;
     let g = (b.sun_samples as f32).sqrt() as u32;
