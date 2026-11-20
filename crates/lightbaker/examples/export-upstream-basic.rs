@@ -60,7 +60,7 @@ fn main() -> Result<()> {
     if std::env::args().any(|a| a == "--bake") {
         let gpu = Gpu::new()?;
         let log = |_: &str| {};
-        let baked = pollster::block_on(bake(&Scene::read(&bytes)?, &gpu, &Options { cache: None, log: &log }))?;
+        let baked = pollster::block_on(bake(&Scene::read(&bytes)?, &gpu, &Options { cache: None, log: &log, ..Default::default() }))?;
         let report = expect.evaluate(&scene, &baked)?;
         for o in &report.outcomes {
             println!("{} {}: {} vs {}", if o.passed { "ok  " } else { "FAIL" }, o.name, o.a, o.b);

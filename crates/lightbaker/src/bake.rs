@@ -16,6 +16,7 @@ use crate::gpu::{Gpu, Params, Pass};
 use crate::layout::{Layout, TileKey};
 use crate::raster::{Texel, rasterize};
 use crate::scene::Scene;
+use crate::progress::{Hooks, Phase, Progress};
 use crate::output::{VALIDITY_CENTRE, VALIDITY_FILLED, VALIDITY_NONE, VALIDITY_OFFSET, VALIDITY_PUSHED, VALIDITY_VOLUME};
 use crate::volume::{Volume, bake_volume};
 
@@ -30,6 +31,24 @@ pub struct Options<'a> {
     /// where baked tiles are kept between bakes (none: everything is baked)
     pub cache: Option<&'a dyn TileStore>,
     pub log: &'a (dyn Fn(&str) + Sync),
+    /// told after every GPU batch and stage
+    pub progress: Option<&'a dyn Fn(Progress)>,
+    /// asked before every GPU batch and after every readback; true stops the bake with [`Cancelled`](crate::progress::Cancelled)
+    pub cancel: Option<&'a dyn Fn() -> bool>,
+}
+
+fn no_log(_: &str) {}
+
+impl Default for Options<'_> {
+    fn default() -> Self {
+        Options { cache: None, log: &no_log, progress: None, cancel: None }
+    }
+}
+
+impl<'a> Options<'a> {
+    pub fn hooks(&self) -> Hooks<'a> {
+        Hooks { progress: self.progress, cancel: self.cancel }
+    }
 }
 
 pub struct Bake {
@@ -119,6 +138,10 @@ pub async fn bake(scene: &Scene, gpu: &Gpu, o: &Options<'_>) -> Result<Bake> {
     };
     (o.log)(&format!("{} triangles, {} charts in {} tiles, atlas {}x{}, BVH {} nodes ({:.1} s)", scene.triangle_count(), layout.charts.len(), layout.tiles.len(), aw, ah, bvh.nodes.len(), started.elapsed().as_secs_f64()));
 
+    let hooks = o.hooks();
+    hooks.report(Phase::Layout, 0, 1, 1);
+    hooks.check()?;
+
     // which tiles the cache has
     let cache = Cache::new(o.cache)?;
     let boxes = Boxes::new(scene);
@@ -147,7 +170,7 @@ pub async fn bake(scene: &Scene, gpu: &Gpu, o: &Options<'_>) -> Result<Bake> {
         .collect();
     let covered: Vec<Texel> = work.iter().flat_map(|w| w.texels.iter().filter(|t| t.covered()).copied()).collect();
     let t0 = Instant::now();
-    let direct = gpu.run(Pass::Direct, &buffers, params, &covered, &[]).await?;
+    let direct = gpu.run(Pass::Direct, &buffers, params, &covered, &[], &hooks, Phase::Direct, 0).await?;
     (o.log)(&format!("sun and occlusion: {} texels, {:.1} s", covered.len(), t0.elapsed().as_secs_f64()));
 
     // geometry worth a look: materials much of whose surface lies inside solids (faces hidden inside
@@ -298,7 +321,7 @@ pub async fn bake(scene: &Scene, gpu: &Gpu, o: &Options<'_>) -> Result<Bake> {
     let starts = offsets(work.iter().map(|w| w.gathered.iter().filter(|&&g| g).count()));
     for bounce in 0..b.gi_bounces {
         let t0 = Instant::now();
-        let res = gpu.run(Pass::Gather, &buffers, params, &gather, &light).await?;
+        let res = gpu.run(Pass::Gather, &buffers, params, &gather, &light, &hooks, Phase::Bounce, bounce + 1).await?;
         let updated: Vec<Vec<[f32; 3]>> = work
             .par_iter()
             .zip(&starts)
@@ -328,7 +351,7 @@ pub async fn bake(scene: &Scene, gpu: &Gpu, o: &Options<'_>) -> Result<Bake> {
         (o.log)(&format!("bounce {}: {} texels x {} rays, {:.1} s", bounce + 1, gather.len(), b.gi_rays, t0.elapsed().as_secs_f64()));
     }
     let volume = match &h.volume {
-        Some(v) => Some(bake_volume(scene, gpu, &buffers, params, &light, v, &boxes, &global, &cache, o.log).await?),
+        Some(v) => Some(bake_volume(scene, gpu, &buffers, params, &light, v, &boxes, &global, &cache, o.log, &hooks).await?),
         None => None,
     };
     // texels the bake left without light of their own (a face every texel of which lies inside a

@@ -1,0 +1,29 @@
+[package]
+name = "lightbaker-web"
+description = "lightbaker in the browser: a wasm-bindgen bridge for a Web Worker (capabilities, bake, cancel, typed errors)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+anyhow.workspace = true
+lightbaker = { path = "../lightbaker", default-features = false, features = ["web"] }
+serde.workspace = true
+serde_json.workspace = true
+wasm-bindgen = "0.2.100"
+wasm-bindgen-futures = "0.4.50"
+js-sys = "0.3.77"
+serde-wasm-bindgen = "0.6"
+console_error_panic_hook = "0.1.7"
+futures-channel.workspace = true
+
+[dev-dependencies]
+wasm-bindgen-test = "0.3.50"
+
+[package.metadata.wasm-pack.profile.release]
+# wasm-opt is downloaded by wasm-pack; keep builds offline-friendly and fast
+wasm-opt = false

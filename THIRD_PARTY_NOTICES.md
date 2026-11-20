@@ -11,15 +11,15 @@ assets) and rerun it whenever `Cargo.lock` or a package manifest changes.
 |---|---|---|---|---|
 | lightbaker (jer-nc/lightbaker) | 4fe85da | MIT, Copyright (c) 2026 Orbitoon | https://github.com/jer-nc/lightbaker | Forked engine, CLI, js/ package, docs/DESIGN.md, docs/FORMAT.md, docs/images/ |
 
-## Rust crates (172, from Cargo.lock)
+## Rust crates (183, from Cargo.lock)
 
-### MIT OR Apache-2.0 (109)
+### MIT OR Apache-2.0 (113)
 
-allocator-api2 0.2.21, android_system_properties 0.1.6, anstream 1.0.0, anstyle 1.0.14, anstyle-parse 1.0.0, anstyle-query 1.1.5, anstyle-wincon 3.0.11, anyhow 1.0.104, arrayvec 0.7.8, ash 0.38.0+1.3.281, bitflags 2.13.2, bumpalo 3.20.3, cc 1.11.1, cfg-if 1.0.5, clap 4.6.7, clap_builder 4.6.7, clap_derive 4.6.7, clap_lex 1.1.1, colorchoice 1.0.5, cpufeatures 0.3.1, crc32fast 1.5.5, crossbeam-deque 0.8.8, crossbeam-epoch 0.9.21, crossbeam-utils 0.8.23, document-features 0.2.12, either 1.19.0, find-msvc-tools 0.1.15, flate2 1.1.11, futures-channel 0.3.34, futures-core 0.3.34, futures-task 0.3.34, futures-util 0.3.34, getrandom 0.4.3, glam 0.34.3, gpu-allocator 0.28.0, half 2.7.1, hashbrown 0.16.1, hashbrown 0.17.1, heck 0.5.0, is_terminal_polyfill 1.70.2, itoa 1.0.19, jni-sys 0.3.1, jni-sys 0.4.1, jni-sys-macros 0.4.1, jobserver 0.1.35, js-sys 0.3.107, libc 0.2.191, litrs 1.0.1, lock_api 0.4.14, log 0.4.35, naga 30.0.1, naga-types 30.0.1, ndk-sys 0.6.0+11769913, num-traits 0.2.19, once_cell 1.21.4, once_cell_polyfill 1.70.2, parking_lot 0.12.5, parking_lot_core 0.9.12, pkg-config 0.3.34, presser 0.3.1, proc-macro2 1.0.107, profiling 1.0.18, quote 1.0.47, range-alloc 0.1.5, raw-window-metal 1.1.0, rayon 1.12.0, rayon-core 1.13.0, renderdoc-sys 1.1.0, rustversion 1.0.23, scopeguard 1.2.0, serde 1.0.229, serde_core 1.0.229, serde_derive 1.0.229, serde_json 1.0.154, shlex 2.0.1, smallvec 1.16.5, static_assertions 1.1.0, syn 2.0.119, syn 3.0.10, thiserror 2.0.21, thiserror-impl 2.0.21, unicode-width 0.2.3, wasm-bindgen 0.2.130, wasm-bindgen-futures 0.4.80, wasm-bindgen-macro 0.2.130, wasm-bindgen-macro-support 0.2.130, wasm-bindgen-shared 0.2.130, web-sys 0.3.107, web-time 1.1.0, wgpu 30.0.1, wgpu-core 30.0.1, wgpu-core-deps-apple 30.0.1, wgpu-core-deps-emscripten 30.0.1, wgpu-core-deps-windows-linux-android 30.0.1, wgpu-hal 30.0.1, wgpu-naga-bridge 30.0.1, wgpu-types 30.0.1, windows 0.62.2, windows-collections 0.3.2, windows-core 0.62.2, windows-future 0.3.2, windows-implement 0.60.2, windows-interface 0.59.3, windows-link 0.2.1, windows-numerics 0.3.1, windows-result 0.4.1, windows-strings 0.5.1, windows-sys 0.61.2, windows-threading 0.2.1
+allocator-api2 0.2.21, android_system_properties 0.1.6, anstream 1.0.0, anstyle 1.0.14, anstyle-parse 1.0.0, anstyle-query 1.1.5, anstyle-wincon 3.0.11, anyhow 1.0.104, arrayvec 0.7.8, ash 0.38.0+1.3.281, bitflags 2.13.2, bumpalo 3.20.3, cast 0.3.0, cc 1.11.1, cfg-if 1.0.5, clap 4.6.7, clap_builder 4.6.7, clap_derive 4.6.7, clap_lex 1.1.1, colorchoice 1.0.5, cpufeatures 0.3.1, crc32fast 1.5.5, crossbeam-deque 0.8.8, crossbeam-epoch 0.9.21, crossbeam-utils 0.8.23, document-features 0.2.12, either 1.19.0, find-msvc-tools 0.1.15, flate2 1.1.11, futures-channel 0.3.34, futures-core 0.3.34, futures-task 0.3.34, futures-util 0.3.34, getrandom 0.4.3, glam 0.34.3, gpu-allocator 0.28.0, half 2.7.1, hashbrown 0.16.1, hashbrown 0.17.1, heck 0.5.0, is_terminal_polyfill 1.70.2, itoa 1.0.19, jni-sys 0.3.1, jni-sys 0.4.1, jni-sys-macros 0.4.1, jobserver 0.1.35, js-sys 0.3.107, libc 0.2.191, litrs 1.0.1, lock_api 0.4.14, log 0.4.35, naga 30.0.1, naga-types 30.0.1, ndk-sys 0.6.0+11769913, num-traits 0.2.19, once_cell 1.21.4, once_cell_polyfill 1.70.2, parking_lot 0.12.5, parking_lot_core 0.9.12, pkg-config 0.3.34, presser 0.3.1, proc-macro2 1.0.107, profiling 1.0.18, quote 1.0.47, range-alloc 0.1.5, raw-window-metal 1.1.0, rayon 1.12.0, rayon-core 1.13.0, renderdoc-sys 1.1.0, rustversion 1.0.23, scopeguard 1.2.0, serde 1.0.229, serde_core 1.0.229, serde_derive 1.0.229, serde_json 1.0.154, shlex 2.0.1, smallvec 1.16.5, static_assertions 1.1.0, syn 2.0.119, syn 3.0.10, thiserror 2.0.21, thiserror-impl 2.0.21, unicode-width 0.2.3, wasm-bindgen 0.2.130, wasm-bindgen-futures 0.4.80, wasm-bindgen-macro 0.2.130, wasm-bindgen-macro-support 0.2.130, wasm-bindgen-shared 0.2.130, wasm-bindgen-test 0.3.80, wasm-bindgen-test-macro 0.3.80, wasm-bindgen-test-shared 0.2.130, web-sys 0.3.107, web-time 1.1.0, wgpu 30.0.1, wgpu-core 30.0.1, wgpu-core-deps-apple 30.0.1, wgpu-core-deps-emscripten 30.0.1, wgpu-core-deps-windows-linux-android 30.0.1, wgpu-hal 30.0.1, wgpu-naga-bridge 30.0.1, wgpu-types 30.0.1, windows 0.62.2, windows-collections 0.3.2, windows-core 0.62.2, windows-future 0.3.2, windows-implement 0.60.2, windows-interface 0.59.3, windows-link 0.2.1, windows-numerics 0.3.1, windows-result 0.4.1, windows-strings 0.5.1, windows-sys 0.61.2, windows-threading 0.2.1
 
-### MIT (17)
+### MIT (20)
 
-block2 0.6.2, cfg_aliases 0.2.2, crunchy 0.2.4, dlib 0.5.3, libm 0.2.16, objc2 0.6.5, objc2-encode 4.1.0, objc2-foundation 0.3.2, ordered-float 5.5.1, redox_syscall 0.5.18, simd-adler32 0.3.10, slab 0.4.12, strsim 0.11.1, tokio 1.54.1, wayland-sys 0.31.11, xml-rs 0.8.29, zmij 1.0.23
+block2 0.6.2, cfg_aliases 0.2.2, crunchy 0.2.4, dlib 0.5.3, libm 0.2.16, nu-ansi-term 0.50.3, objc2 0.6.5, objc2-encode 4.1.0, objc2-foundation 0.3.2, oorandom 11.1.5, ordered-float 5.5.1, redox_syscall 0.5.18, serde-wasm-bindgen 0.6.5, simd-adler32 0.3.10, slab 0.4.12, strsim 0.11.1, tokio 1.54.1, wayland-sys 0.31.11, xml-rs 0.8.29, zmij 1.0.23
 
 ### Apache-2.0 OR MIT (9)
 
@@ -33,6 +33,10 @@ bytemuck 1.25.2, bytemuck_derive 1.12.1, dispatch2 0.3.1, objc2-core-foundation 
 
 codespan-reporting 0.13.1, gl_generator 0.14.0, glutin_wgl_sys 0.6.1, khronos_api 3.1.0, spirv 0.4.0+sdk-1.4.341.0
 
+### Apache-2.0/MIT (4)
+
+console_error_panic_hook 0.1.7, minicov 0.3.8, pollster 1.0.1, rustc-hash 1.1.0
+
 ### BSD-3-Clause (3)
 
 zstd 0.14.3, zstd-safe 8.2.0, zstd-sys 2.1.2+zstd.1.5.7
@@ -45,10 +49,6 @@ memchr 2.8.3, termcolor 1.4.1, winapi-util 0.1.11
 
 foldhash 0.2.0, slotmap 1.1.1, zlib-rs 0.6.8
 
-### Apache-2.0/MIT (2)
-
-pollster 1.0.1, rustc-hash 1.1.0
-
 ### BSD-2-Clause OR Apache-2.0 OR MIT (2)
 
 zerocopy 0.8.63, zerocopy-derive 0.8.63
@@ -60,6 +60,10 @@ glow 0.17.0, raw-window-handle 0.6.2
 ### MIT/Apache-2.0 (2)
 
 khronos-egl 6.0.0, version_check 0.9.5
+
+### Unlicense/MIT (2)
+
+same-file 1.0.6, walkdir 2.5.0
 
 ### (MIT OR Apache-2.0) AND Unicode-3.0 (1)
 

@@ -2,15 +2,16 @@
 //! (each batch submitted and waited on, so no dispatch runs long enough for the driver to reset it).
 
 use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
+use std::sync::{Arc, Mutex};
 
 use anyhow::{Result, anyhow};
 use bytemuck::{Pod, Zeroable};
-use wgpu::util::DeviceExt;
 
 mod adapter;
 pub use adapter::*;
 
 use crate::bvh::Bvh;
+use crate::progress::{Hooks, Phase};
 use crate::raster::Texel;
 
 #[repr(C)]
@@ -70,6 +71,15 @@ pub struct Gpu {
     /// the adapter, its device's granted limits, and whether it is software
     pub report: AdapterReport,
     transfers: [AtomicU64; 4],
+    failure: Arc<Mutex<Failure>>,
+    lost: Mutex<Option<futures_channel::oneshot::Receiver<String>>>,
+}
+
+/// What went wrong on the device outside any call: an uncaptured GPU error (taken by the next check) or its loss (for good).
+#[derive(Default)]
+struct Failure {
+    error: Option<GpuError>,
+    lost: Option<String>,
 }
 
 /// What crossed between CPU and GPU since the last reset: dispatched batches, buffers read back and their bytes, bytes uploaded.
@@ -97,16 +107,27 @@ impl Gpu {
         pollster::block_on(Self::open(&GpuOptions::default()))
     }
 
-    pub async fn open(options: &GpuOptions) -> Result<Gpu> {
-        #[cfg(feature = "web")]
+    /// The adapter a bake would use and its limits, without opening a device (capability checks).
+    pub async fn probe() -> Result<AdapterReport> {
+        let adapter = Self::adapter().await?;
+        Ok(AdapterReport::new(&adapter.get_info(), &adapter.limits()))
+    }
+
+    async fn adapter() -> Result<wgpu::Adapter> {
+        // the browser: WebGPU only, whatever features the workspace build unified (never WebGL: no compute)
+        #[cfg(target_arch = "wasm32")]
         let desc = wgpu::InstanceDescriptor { backends: wgpu::Backends::BROWSER_WEBGPU, ..wgpu::InstanceDescriptor::new_without_display_handle() };
-        #[cfg(not(feature = "web"))]
+        #[cfg(not(target_arch = "wasm32"))]
         let desc = wgpu::InstanceDescriptor::new_without_display_handle_from_env();
         let instance = wgpu::Instance::new(desc);
-        let adapter = instance
+        Ok(instance
             .request_adapter(&wgpu::RequestAdapterOptions { power_preference: wgpu::PowerPreference::HighPerformance, ..Default::default() })
             .await
-            .map_err(|e| GpuError::NoAdapter(e.to_string()))?;
+            .map_err(|e| GpuError::NoAdapter(e.to_string()))?)
+    }
+
+    pub async fn open(options: &GpuOptions) -> Result<Gpu> {
+        let adapter = Self::adapter().await?;
         let info = adapter.get_info();
         admit(&info.name, is_software_adapter(&info.name, info.device_type), options)?;
         let (device, queue) = adapter
@@ -114,6 +135,26 @@ impl Gpu {
             .await
             .map_err(|e| GpuError::NoDevice(e.to_string()))?;
         let report = AdapterReport::new(&info, &device.limits());
+        let failure = Arc::new(Mutex::new(Failure::default()));
+        let f = failure.clone();
+        device.on_uncaptured_error(Arc::new(move |e: wgpu::Error| {
+            let mut f = f.lock().unwrap();
+            if f.error.is_none() {
+                f.error = Some(match e {
+                    wgpu::Error::OutOfMemory { .. } => GpuError::OutOfMemory(e.to_string()),
+                    _ => GpuError::Gpu(e.to_string()),
+                });
+            }
+        }));
+        let (lost_tx, lost_rx) = futures_channel::oneshot::channel();
+        let (f, lost_tx) = (failure.clone(), Mutex::new(Some(lost_tx)));
+        device.set_device_lost_callback(move |reason, message| {
+            let why = format!("{reason:?}: {message}");
+            f.lock().unwrap().lost.get_or_insert(why.clone());
+            if let Some(tx) = lost_tx.lock().unwrap().take() {
+                let _ = tx.send(why);
+            }
+        });
         let module = device.create_shader_module(wgpu::ShaderModuleDescriptor { label: Some("trace"), source: wgpu::ShaderSource::Wgsl(include_str!("trace.wgsl").into()) });
         let storage = |binding: u32, read_only: bool| wgpu::BindGroupLayoutEntry {
             binding,
@@ -153,7 +194,26 @@ impl Gpu {
         let pipelines = [pipeline("direct"), pipeline("gather"), pipeline("volume")];
         let software = report.software;
         let adapter = format!("{} ({:?}{})", info.name, info.backend, if software { ", software" } else { "" });
-        Ok(Gpu { device, queue, layout, pipelines, adapter, software, report, transfers: Default::default() })
+        Ok(Gpu { device, queue, layout, pipelines, adapter, software, report, transfers: Default::default(), failure, lost: Mutex::new(Some(lost_rx)) })
+    }
+
+    /// Fails if the device was lost or reported an error since the last check (the error is then cleared).
+    pub fn check(&self) -> Result<(), GpuError> {
+        let mut f = self.failure.lock().unwrap();
+        if let Some(why) = &f.lost {
+            return Err(GpuError::DeviceLost(why.clone()));
+        }
+        f.error.take().map_or(Ok(()), Err)
+    }
+
+    /// Resolves with the reason when the device is lost; taken once (the bridge forwards it to JS).
+    pub fn take_device_lost(&self) -> Option<futures_channel::oneshot::Receiver<String>> {
+        self.lost.lock().unwrap().take()
+    }
+
+    /// Destroys the device, as a lost one would be (device-loss tests).
+    pub fn destroy(&self) {
+        self.device.destroy();
     }
 
     pub fn transfers(&self) -> Transfers {
@@ -176,10 +236,14 @@ impl Gpu {
 
     /// Runs `pass` over `texels` (probes for the volume: their position, their index as the normal's w),
     /// reading `light` (per atlas texel); returns each item's results. Awaits each batch's readback.
-    pub async fn run(&self, pass: Pass, scene: &SceneBuffers, params: Params, texels: &[Texel], light: &[[f32; 4]]) -> Result<Vec<[f32; 4]>> {
+    /// Reports progress after each batch; asks `hooks` to cancel before each batch and after each readback.
+    #[allow(clippy::too_many_arguments)]
+    pub async fn run(&self, pass: Pass, scene: &SceneBuffers, params: Params, texels: &[Texel], light: &[[f32; 4]], hooks: &Hooks<'_>, phase: Phase, bounce: u32) -> Result<Vec<[f32; 4]>> {
         let items = texels.len();
         let mut out = Vec::with_capacity(items * pass.width());
+        hooks.check()?;
         if items == 0 {
+            hooks.report(phase, bounce, 0, 0);
             return Ok(out);
         }
         let texels = self.storage("texels", bytemuck::cast_slice(texels))?;
@@ -187,12 +251,14 @@ impl Gpu {
         let pipeline = &self.pipelines[pass as usize];
         let mut first = 0;
         while first < items {
+            hooks.check()?;
+            self.check()?;
             let n = pass.batch().min(items - first);
             let mut p = params;
             p.counts[3] = n as u32;
             p.atlas[2] = first as u32;
             self.transfers[3].fetch_add(size_of::<Params>() as u64, Relaxed);
-            let uniform = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor { label: Some("params"), contents: bytemuck::bytes_of(&p), usage: wgpu::BufferUsages::UNIFORM });
+            let uniform = self.upload("params", bytemuck::bytes_of(&p), wgpu::BufferUsages::UNIFORM);
             let size = (n * pass.width() * 16) as u64;
             let result = self.device.create_buffer(&wgpu::BufferDescriptor { label: Some("out"), size, usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC, mapped_at_creation: false });
             let read = self.device.create_buffer(&wgpu::BufferDescriptor { label: Some("read"), size, usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST, mapped_at_creation: false });
@@ -227,15 +293,21 @@ impl Gpu {
                 let _ = tx.send(r);
             });
             // natively wgpu runs the callback when polled; in the browser the promise resolves while we await
-            #[cfg(not(feature = "web"))]
-            self.device.poll(wgpu::PollType::wait_indefinitely()).map_err(|e| anyhow!("GPU: {e:?}"))?;
-            rx.await.map_err(|_| anyhow!("GPU read back: the device dropped the request"))?.map_err(|e| anyhow!("GPU read back: {e:?}"))?;
+            #[cfg(not(target_arch = "wasm32"))]
+            let polled = self.device.poll(wgpu::PollType::wait_indefinitely());
+            let mapped = rx.await;
+            self.check()?;
+            #[cfg(not(target_arch = "wasm32"))]
+            polled.map_err(|e| anyhow!("GPU: {e:?}"))?;
+            mapped.map_err(|_| anyhow!("GPU read back: the device dropped the request"))?.map_err(|e| anyhow!("GPU read back: {e:?}"))?;
             out.extend_from_slice(bytemuck::cast_slice(&slice.get_mapped_range()?));
             self.transfers[0].fetch_add(1, Relaxed);
             self.transfers[1].fetch_add(1, Relaxed);
             self.transfers[2].fetch_add(size, Relaxed);
             read.unmap();
             first += n;
+            hooks.check()?;
+            hooks.report(phase, bounce, first, items);
         }
         Ok(out)
     }
@@ -243,7 +315,15 @@ impl Gpu {
     fn storage(&self, label: &str, contents: &[u8]) -> Result<wgpu::Buffer> {
         self.report.limits.check_storage(label, contents.len() as u64)?;
         self.transfers[3].fetch_add(contents.len() as u64, Relaxed);
-        Ok(self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor { label: Some(label), contents, usage: wgpu::BufferUsages::STORAGE }))
+        Ok(self.upload(label, contents, wgpu::BufferUsages::STORAGE))
+    }
+
+    /// A buffer holding `contents` (a multiple of 4 bytes), written through the queue: unlike a buffer mapped at
+    /// creation, this reports a lost device as an error instead of panicking.
+    fn upload(&self, label: &str, contents: &[u8], usage: wgpu::BufferUsages) -> wgpu::Buffer {
+        let buffer = self.device.create_buffer(&wgpu::BufferDescriptor { label: Some(label), size: contents.len() as u64, usage: usage | wgpu::BufferUsages::COPY_DST, mapped_at_creation: false });
+        self.queue.write_buffer(&buffer, 0, contents);
+        buffer
     }
 }
 

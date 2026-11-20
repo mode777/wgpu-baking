@@ -53,9 +53,14 @@ GPU integration tests and examples require `native`.
 ```powershell
 cargo build -p lightbaker --target wasm32-unknown-unknown --no-default-features --features web   # verified P2.1
 cargo test -p lightbaker --no-default-features --features web --lib                              # web-feature unit tests on the host
-wasm-pack build crates/lightbaker-web --target web --release                                     # (P2) → crates/lightbaker-web/pkg
-cargo test -p lightbaker-web --target wasm32-unknown-unknown                                     # (P2) wasm-bindgen-test runner
+wasm-pack build crates/lightbaker-web --target web --release                                     # verified P2.4 → crates/lightbaker-web/pkg (~1.1 MB wasm)
+wasm-pack test --node crates/lightbaker-web                                                      # verified P2.4: bridge tests in Node (no WebGPU)
+cargo test -p lightbaker-web                                                                     # host unit tests (config overrides, error kinds)
 ```
+
+Versions (P2.4): `wasm-bindgen` 0.2.130 (from `Cargo.lock`; wasm-pack 0.15.1 installs the matching
+`wasm-bindgen` CLI automatically), Node ≥ 22 for `wasm-pack test --node` (needs the global `navigator`).
+`wasm-opt` is disabled in the crate's wasm-pack profile (no download needed).
 
 ## App
 

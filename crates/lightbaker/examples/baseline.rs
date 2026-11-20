@@ -38,7 +38,7 @@ fn measure(name: &str, scene: &Scene, gpu: &Gpu) -> Result<Measured> {
         let log = |s: &str| lines.lock().unwrap().push((Instant::now(), s.to_string()));
         gpu.reset_transfers();
         let start = Instant::now();
-        let b = pollster::block_on(bake(scene, gpu, &Options { cache: None, log: &log }))?;
+        let b = pollster::block_on(bake(scene, gpu, &Options { cache: None, log: &log, ..Default::default() }))?;
         let end = Instant::now();
         let lines = lines.into_inner().unwrap();
         let mut prev = start;

@@ -36,7 +36,7 @@ fn shadows_occlusion_bounces_and_reuse() {
     let _ = std::fs::remove_dir_all(&dir);
     let log = |s: &str| eprintln!("{s}");
     let store = lightbaker::cache::FsStore::new(&dir).unwrap();
-    let opts = Options { cache: Some(&store), log: &log };
+    let opts = Options { cache: Some(&store), log: &log, ..Default::default() };
     let s = scene(8.0);
     let b = pollster::block_on(bake(&s, &gpu, &opts)).unwrap();
     let l = &b.layout;

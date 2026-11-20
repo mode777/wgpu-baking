@@ -12,6 +12,7 @@ use glam::Vec3;
 use crate::cache::Cache;
 use crate::deps::{Aabb, Boxes, hash_reach};
 use crate::gpu::{Gpu, Params, Pass, SceneBuffers};
+use crate::progress::{Hooks, Phase};
 use crate::layout::{TileKey, tile_of};
 use crate::raster::Texel;
 use crate::scene::{Scene, VolumeSettings};
@@ -31,7 +32,7 @@ pub struct Volume {
 }
 
 #[allow(clippy::too_many_arguments)]
-pub async fn bake_volume(scene: &Scene, gpu: &Gpu, buffers: &SceneBuffers, mut params: Params, light: &[[f32; 4]], v: &VolumeSettings, boxes: &Boxes, global: &blake3::Hash, cache: &Cache<'_>, log: &(dyn Fn(&str) + Sync)) -> Result<Volume> {
+pub async fn bake_volume(scene: &Scene, gpu: &Gpu, buffers: &SceneBuffers, mut params: Params, light: &[[f32; 4]], v: &VolumeSettings, boxes: &Boxes, global: &blake3::Hash, cache: &Cache<'_>, log: &(dyn Fn(&str) + Sync), hooks: &Hooks<'_>) -> Result<Volume> {
     let started = Instant::now();
     let n = |a: usize| ((v.max[a] - v.min[a]) / v.step).round() as u32 + 1;
     let size = [n(0).max(2), n(1).max(2), n(2).max(2)];
@@ -74,7 +75,7 @@ pub async fn bake_volume(scene: &Scene, gpu: &Gpu, buffers: &SceneBuffers, mut p
         })
         .collect();
     params.counts[2] = v.rays;
-    let res = gpu.run(Pass::Volume, buffers, params, &items, light).await?;
+    let res = gpu.run(Pass::Volume, buffers, params, &items, light, hooks, Phase::Volume, 0).await?;
     for (i, &k) in todo.iter().enumerate() {
         probes[k as usize] = [res[i * 4], res[i * 4 + 1], res[i * 4 + 2], res[i * 4 + 3]];
     }

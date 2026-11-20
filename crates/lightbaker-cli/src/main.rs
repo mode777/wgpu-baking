@@ -58,7 +58,7 @@ fn main() -> Result<()> {
         if !args.quiet {
             eprintln!("{name}:");
         }
-        let baked = pollster::block_on(bake(&scene, &gpu, &Options { cache: store.as_ref().map(|s| s as &dyn TileStore), log: &log }))?;
+        let baked = pollster::block_on(bake(&scene, &gpu, &Options { cache: store.as_ref().map(|s| s as &dyn TileStore), log: &log, ..Default::default() }))?;
         let dir = args.out.clone().unwrap_or_else(|| path.parent().map(PathBuf::from).unwrap_or_default());
         std::fs::create_dir_all(&dir)?;
         let file = dir.join(format!("{name}.lbake"));

@@ -27,13 +27,76 @@ fn upstream_basic_is_the_upstream_test_scene() {
 }
 
 #[test]
+fn progress_and_cancel() {
+    use lightbaker::progress::{Cancelled, Phase, Progress};
+    use std::cell::{Cell, RefCell};
+    let Some(gpu) = gpu() else { return };
+    let dir = scenes_dir().join("upstream-basic");
+    let scene = Scene::read(&std::fs::read(dir.join("upstream-basic.lbscene")).unwrap()).unwrap();
+
+    // every phase reports, in order, and ends with done = total
+    let seen: RefCell<Vec<Progress>> = RefCell::new(Vec::new());
+    let progress = |p: Progress| seen.borrow_mut().push(p);
+    let full = pollster::block_on(bake(&scene, &gpu, &Options { progress: Some(&progress), ..Default::default() })).unwrap();
+    let seen = seen.into_inner();
+    let mut ends: Vec<(Phase, u32)> = Vec::new();
+    for (i, p) in seen.iter().enumerate() {
+        assert!(p.done <= p.total, "{p:?}");
+        let last_of_phase = seen.get(i + 1).is_none_or(|q| (q.phase, q.bounce) != (p.phase, p.bounce));
+        if last_of_phase {
+            assert_eq!(p.done, p.total, "{p:?} ends its phase");
+            ends.push((p.phase, p.bounce));
+        }
+    }
+    assert_eq!(ends, [(Phase::Layout, 0), (Phase::Direct, 0), (Phase::Bounce, 1), (Phase::Bounce, 2), (Phase::Volume, 0)]);
+
+    // cancelled after the first direct batch: no further batch, a Cancelled error
+    gpu.reset_transfers();
+    let stop = Cell::new(false);
+    let progress = |p: Progress| {
+        if p.phase == Phase::Direct {
+            stop.set(true);
+        }
+    };
+    let cancel = || stop.get();
+    let err = pollster::block_on(bake(&scene, &gpu, &Options { progress: Some(&progress), cancel: Some(&cancel), ..Default::default() })).err().expect("the bake was cancelled");
+    assert!(err.downcast_ref::<Cancelled>().is_some(), "{err:#}");
+    assert_eq!(gpu.transfers().batches, 1, "cancelled within one batch");
+
+    // the next bake is unaffected
+    let again = pollster::block_on(bake(&scene, &gpu, &Options::default())).unwrap();
+    assert!(output::write(&scene, &again).unwrap() == output::write(&scene, &full).unwrap());
+}
+
+#[test]
+fn device_lost_mid_bake() {
+    use lightbaker::gpu::GpuError;
+    use lightbaker::progress::{Phase, Progress};
+    let Some(gpu) = gpu() else { return };
+    let scene = Scene::read(&std::fs::read(scenes_dir().join("upstream-basic/upstream-basic.lbscene")).unwrap()).unwrap();
+    let lost = gpu.take_device_lost().expect("the receiver is taken once");
+    assert!(gpu.take_device_lost().is_none());
+    let progress = |p: Progress| {
+        if p.phase == Phase::Direct {
+            gpu.destroy();
+        }
+    };
+    let err = pollster::block_on(bake(&scene, &gpu, &Options { progress: Some(&progress), ..Default::default() })).err().expect("the bake fails");
+    assert!(matches!(err.downcast_ref::<GpuError>(), Some(GpuError::DeviceLost(_))), "{err:#}");
+    let why = pollster::block_on(lost).expect("the lost callback fired");
+    assert!(why.contains("Destroyed"), "{why}");
+    // the device stays lost
+    assert!(matches!(gpu.check(), Err(GpuError::DeviceLost(_))));
+}
+
+#[test]
 fn upstream_basic_bakes_reproducibly_and_meets_its_expectations() {
     let Some(gpu) = gpu() else { return };
     let dir = scenes_dir().join("upstream-basic");
     let expect = Expect::parse(&std::fs::read_to_string(dir.join("expect.json")).unwrap()).unwrap();
     let scene = Scene::read(&std::fs::read(dir.join(&expect.scene)).unwrap()).unwrap();
     let log = |_: &str| {};
-    let opts = Options { cache: None, log: &log };
+    let opts = Options { cache: None, log: &log, ..Default::default() };
     gpu.reset_transfers();
     let first = pollster::block_on(bake(&scene, &gpu, &opts)).unwrap();
     let t = gpu.transfers();
@@ -55,9 +118,9 @@ fn upstream_basic_bakes_reproducibly_and_meets_its_expectations() {
 
     // the in-memory store (the browser's) reuses every tile and probe chunk of an unchanged scene
     let store = MemoryStore::new();
-    let fresh = pollster::block_on(bake(&scene, &gpu, &Options { cache: Some(&store), log: &log })).unwrap();
+    let fresh = pollster::block_on(bake(&scene, &gpu, &Options { cache: Some(&store), log: &log, ..Default::default() })).unwrap();
     assert!(!store.is_empty());
-    let again = pollster::block_on(bake(&scene, &gpu, &Options { cache: Some(&store), log: &log })).unwrap();
+    let again = pollster::block_on(bake(&scene, &gpu, &Options { cache: Some(&store), log: &log, ..Default::default() })).unwrap();
     assert_eq!((again.stats.tiles_baked, again.stats.chunks_baked), (0, 0));
     assert!(output::write(&scene, &again).unwrap() == output::write(&scene, &first).unwrap());
     assert!(output::write(&scene, &fresh).unwrap() == output::write(&scene, &first).unwrap());

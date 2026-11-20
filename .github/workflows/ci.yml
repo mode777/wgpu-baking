@@ -13,7 +13,7 @@ concurrency:
 env:
   CARGO_TERM_COLOR: always
   # Crates linted with `clippy -D warnings`. Upstream crates are not linted (ADR-0001); new crates are added here.
-  CLIPPY_CRATES: ""
+  CLIPPY_CRATES: "lightbaker-web"
 
 jobs:
   rust-native:
@@ -33,10 +33,14 @@ jobs:
         run: cargo build --workspace --locked
       - name: Unit tests (GPU tests skip without an adapter)
         run: cargo test --workspace --locked
-      - name: Clippy (new crates)
+      - name: fmt + clippy (new crates; upstream crates are not linted, ADR-0001)
         if: env.CLIPPY_CRATES != ''
         shell: bash
-        run: for c in $CLIPPY_CRATES; do cargo clippy -p "$c" --all-targets --locked -- -D warnings; done
+        run: |
+          for c in $CLIPPY_CRATES; do
+            cargo fmt -p "$c" --check
+            cargo clippy -p "$c" --all-targets --no-deps --locked -- -D warnings
+          done
 
   wasm:
     name: wasm (browser build)
@@ -58,6 +62,18 @@ jobs:
           fi
       - name: Engine unit tests with the web feature (host)
         run: cargo test -p lightbaker --no-default-features --features web --lib --locked
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-pack
+      - name: Bridge clippy on wasm32
+        run: cargo clippy -p lightbaker-web --target wasm32-unknown-unknown --all-targets --no-deps --locked -- -D warnings
+      - name: wasm-pack build (lightbaker-web)
+        run: wasm-pack build crates/lightbaker-web --target web --release
+      - name: wasm-bindgen tests in Node (no WebGPU)
+        run: wasm-pack test --node crates/lightbaker-web
 
   rust-gpu:
     name: rust-gpu (lavapipe)

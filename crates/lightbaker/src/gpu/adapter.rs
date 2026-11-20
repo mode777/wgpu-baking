@@ -22,6 +22,12 @@ pub enum GpuError {
     NoDevice(String),
     /// a buffer the bake needs is larger than the device allows
     LimitExceeded { buffer: String, bytes: u64, limit: u64, limit_name: &'static str },
+    /// the device was lost (driver reset, `destroy()`, the browser reclaiming it); the reason as reported
+    DeviceLost(String),
+    /// the device ran out of memory
+    OutOfMemory(String),
+    /// a GPU validation or internal error
+    Gpu(String),
 }
 
 impl fmt::Display for GpuError {
@@ -31,6 +37,9 @@ impl fmt::Display for GpuError {
             GpuError::SoftwareAdapterRefused(name) => write!(f, "the only GPU adapter is a software one ({name}); allow software adapters to bake on it anyway (slow, results labelled)"),
             GpuError::NoDevice(e) => write!(f, "no GPU device: {e}"),
             GpuError::LimitExceeded { buffer, bytes, limit, limit_name } => write!(f, "the {buffer} buffer needs {bytes} bytes, more than the device's {limit_name} of {limit}"),
+            GpuError::DeviceLost(why) => write!(f, "the GPU device was lost ({why})"),
+            GpuError::OutOfMemory(e) => write!(f, "the GPU ran out of memory: {e}"),
+            GpuError::Gpu(e) => write!(f, "GPU error: {e}"),
         }
     }
 }

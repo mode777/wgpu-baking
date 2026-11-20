@@ -226,19 +226,50 @@ is rejected (`internal`) — the UI cancels first.
 
 ## 8. WASM bridge (`crates/lightbaker-web`, Rust side)
 
-```rust
-#[wasm_bindgen] pub async fn capabilities() -> Result<JsValue, JsError>;
+Implemented in P2.4 (`wasm-pack build crates/lightbaker-web --target web` → `pkg/`); JS names in
+camelCase:
 
-#[wasm_bindgen] pub struct WebBaker { /* Gpu, cancel flag, tile store */ }
+```rust
+#[wasm_bindgen] pub async fn capabilities() -> Result<JsValue, JsValue>;
+// → { webgpu: boolean, adapter?: AdapterReport & { isFallbackAdapter }, reason?: string }
+//   AdapterReport = { name, vendor, device, deviceType, backend, driver, driverInfo, software,
+//                     limits: { maxStorageBufferBindingSize, maxBufferSize, maxComputeWorkgroupsPerDimension } }
+//   Opens no device. Without `navigator.gpu`: { webgpu: false, reason }.
+
+#[wasm_bindgen] pub struct WebBaker { /* Rc<{ Gpu, MemoryStore, cancel flag, busy flag, last bake }> */ }
 
 #[wasm_bindgen] impl WebBaker {
-    pub async fn create(allow_fallback_adapter: bool) -> Result<WebBaker, JsError>;
-    pub fn unwrap(&self, scene: &[u8], lightmap_json: &str) -> Result<JsValue, JsError>;
-    pub async fn bake(&self, scene: &[u8], config_json: &str, on_progress: &js_sys::Function) -> Result<JsValue, JsError>;
+    pub async fn create(allow_fallback_adapter: bool) -> Result<WebBaker, JsValue>;
+    pub fn adapter(&self) -> JsValue;                                   // AdapterReport & { isFallbackAdapter }
+    pub fn bake(&self, scene: Vec<u8>, config_json: String, on_progress: Option<Function>) -> Promise;
     pub fn cancel(&self);
-    pub fn set_device_lost_callback(&self, cb: js_sys::Function);
+    pub fn evaluate(&self, expect_json: &str) -> Result<JsValue, JsValue>;   // expect.json vs the last bake
+    #[wasm_bindgen(js_name = clearCache)] pub fn clear_cache(&self);
+    #[wasm_bindgen(js_name = cacheBytes)] pub fn cache_bytes(&self) -> f64;
+    #[wasm_bindgen(js_name = setDeviceLostCallback)] pub fn set_device_lost_callback(&self, cb: Function);
+    #[wasm_bindgen(js_name = loseDeviceForTesting)] pub fn lose_device_for_testing(&self);   // device.destroy()
 }
+```
 
+- `bake` resolves to `{ lbake: Uint8Array, atlas: { width, height }, direct: Float32Array /* RG per atlas
+  texel: sun field, AO */, indirect: { width, height, data: Float32Array /* RGB irradiance */ },
+  validity: Uint8Array, volume?: { origin, step, size, probes: Float32Array /* 16 floats a probe */ },
+  stats: { triangles, charts, bake: { tiles, tilesBaked, texelsBaked, chunks, chunksBaked, seconds },
+  adapter, software, transfers: { batches, readbacks, readbackBytes, uploadBytes }, cacheBytes },
+  adapter, warnings: string[] }` (Phase 2 PoC shape; §6 `BakeResult` with pages and per-mesh UVs comes
+  with Phase 3). On the web the `.lbake`'s KTX2 textures are not zstd-supercompressed (ADR-0003).
+- `config_json` is a partial `BakeConfig` (§4). Applied now: `lightmap.{texelsPerMeter, padding,
+  indirectDownscale, chartAngleDeg, atlasMaxSize}`, `sampling.{sunSamples, aoRays, giRays, volumeRays}`,
+  `gi.{bounces, reach, insideShare}`, `ao.{strength, reach, floor, contrast}`, `incremental.reuseTiles`.
+  Anything else yields an entry in `warnings`; invalid values reject with `invalid-scene`.
+- `on_progress` receives `{ phase: 'layout' | 'direct' | 'bounce' | 'volume', bounce, done, total }`
+  after layout and every GPU batch.
+- Rejections are `{ kind, message }` with `kind` from `BakerError` (§7) or `'cancelled'` (the worker turns
+  it into a `cancelled` event). A second `bake` while one runs rejects with `internal`.
+- After device loss the callback receives the reason; the baker rejects further bakes with
+  `device-lost` and must be recreated.
+
+```rust
 // xatlas on the web (ADR-0006): implemented in app/src/bake/xatlasUnwrapper.ts over `xatlas-wasm`,
 // loaded once in the worker before `WebBaker::create`; synchronous after loading.
 #[wasm_bindgen(raw_module = "/src/bake/xatlasUnwrapper.ts")]   // final path/binding style fixed in P3.6
@@ -261,14 +292,20 @@ Implemented so far (P2.1–P2.2):
   `Gpu::new()` (blocking, software refused) stays for native behind `feature = "native"`.
 - `bake(scene, gpu, &options).await` is `async`; native callers wrap it with `pollster::block_on`.
   Readbacks are `map_async` + an awaited oneshot (the device is polled only natively).
-- `Options::cache: Option<&dyn TileStore>` (replacing `Option<&Path>`).
+- `Options::cache: Option<&dyn TileStore>` (replacing `Option<&Path>`); `Options::progress:
+  Option<&dyn Fn(Progress)>` and `Options::cancel: Option<&dyn Fn() -> bool>` (P2.4; not `Sync`, so JS
+  callbacks work); `Options: Default`. Cancelling fails the bake with `progress::Cancelled` within one
+  GPU batch. GPU validation errors and device loss fail the bake (`GpuError::{Gpu, OutOfMemory,
+  DeviceLost}`) instead of panicking; `Gpu::take_device_lost()` resolves with the reason;
+  `Gpu::probe()` reports the adapter without a device. Instance/poll selection keys on
+  `target_arch = "wasm32"` (features unify in workspace builds).
 - `trait TileStore { fn get(&self, kind: &str, hash: &Hash) -> Option<Vec<u8>>; fn put(&self, kind: &str, hash: &Hash, bytes: &[u8]) -> Result<()>; }`
   with `FsStore` (native, zstd, upstream behaviour) and `MemoryStore` (any platform; IndexedDB
   persistence is driven from JS).
 
 Planned:
 
-- `Options` gains `progress: &dyn Fn(Progress)` and `cancel: &dyn Fn() -> bool` (P2.4/P2.7).
+- `WebBaker::unwrap(scene, lightmap_json)` (Phase 3).
 - `trait Unwrapper { fn unwrap(&self, meshes: &[MeshInput], opts: &UnwrapOptions) -> Result<UnwrapOutput>; }`
   implemented by `lightbaker-uv` (xatlas) and by the upstream planar layout.
 
