@@ -18,6 +18,39 @@ Header (`crates/lightbaker/src/scene.rs`, `js/src/scene.ts`):
 | `volume` | `min`, `max`, `step`, `rays` (optional) |
 | `user` | copied to the bake untouched |
 
+## Scene (`.lbscene`, version 2)
+
+Same framing with version 2 (ADR-0010). Header as version 1, plus:
+
+| field | |
+|---|---|
+| `lights[]` | point, spot and area lights (INTERFACES.md §3); default empty. **Refused by the bake until P4.1.** |
+| `materials[].emission` | emitted radiance (linear RGB), default `[0,0,0]`. **Refused if not black until P4.2.** |
+| `materials[].doubleSided` | default `false`. **Refused if true until P4.3.** |
+| `meshes[].vertices` | vertices in each per-vertex array (required in v2) |
+| `meshes[].arrays` | the arrays that follow, `name:type`, in order (required in v2; `positions:f32x3` required) |
+| `meshes[].material` | material of triangles without a material id |
+| `meshes[].triangles` | must equal `indices / 3`, or `vertices / 3` without indices |
+
+Arrays follow the header in mesh order, then in each mesh's `arrays` order, each starting on a 4-byte
+boundary (zero padding):
+
+| array | type | length | meaning |
+|---|---|---|---|
+| `positions:f32x3` | f32 | 3 × vertices | world space, metres |
+| `normals:f32x3` | f32 | 3 × vertices | world space (used from P3.4) |
+| `indices:u32` | u32 | 3 × triangles | into the vertices; absent: three vertices a triangle |
+| `materialIds:u16` | u16 | triangles | per triangle, into `materials` |
+| `colors:f32x3` | f32 | 3 × vertices | linear RGB albedo multiplier (used from P4.3) |
+| `lightmapUv:f32x2` | f32 | 2 × vertices | given lightmap UVs (used from P3.6) |
+
+Readers reject unknown array names, arrays of the wrong length, indices ≥ `vertices` and material ids
+without a material. Defaults (`emission`, `doubleSided`, empty `lights`) are not written, so a version 1
+header serialises unchanged. The engine sees a v2 mesh with several material ids as one engine mesh per
+material (named `mesh#material`), each remembering its file mesh and triangles (`Scene::origin`).
+Golden files: `test-scenes/format-v2/rust.lbscene` (Rust writer) and `ts.lbscene` (TypeScript writer),
+each read by the other language's tests.
+
 ## Bake (`.lbake`, version 1)
 
 `LBAK`, version, header length, header (JSON), then chunks on 8-byte boundaries (offsets from the

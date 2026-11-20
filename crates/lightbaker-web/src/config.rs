@@ -158,6 +158,7 @@ mod tests {
                 rays: 128,
             }),
             user: serde_json::Value::Null,
+            lights: vec![],
         }
     }
 

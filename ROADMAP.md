@@ -106,7 +106,7 @@ Requirements: REQ-WASM-01 … 04, -06, -07, -08 (basic), -10; REQ-ENG-05 (first 
 - [x] **P3.1** `xatlas-wasm-evaluation` — ≤ 1 day: load pinned `xatlas-wasm` in the baker worker
       under Vite, unwrap test meshes per object tile, confirm options/outputs needed by ADR-0004,
       record timings and memory in ADR-0006.
-- [ ] **P3.2** `scene-format-v2` — `.lbscene` v2 in Rust and TS (indexed meshes, normals, material
+- [x] **P3.2** `scene-format-v2` — `.lbscene` v2 in Rust and TS (indexed meshes, normals, material
       ids, colours, lightmap UVs); v1 still read; golden-file tests.
 - [ ] **P3.3** `per-triangle-uvs` — `Tri` 80 B with UVs/page; `trace()` barycentrics; `bounced()`
       via UVs; `charts` binding removed; planar layout emits per-triangle UVs; Rust↔WGSL layout

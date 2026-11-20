@@ -113,6 +113,31 @@ fn device_lost_mid_bake() {
 }
 
 #[test]
+fn indexed_v2_bakes_like_v1() {
+    use lightbaker::scene::FileMesh;
+    let Some(gpu) = gpu() else { return };
+    let v1 = Scene::read(&std::fs::read(scenes_dir().join("upstream-basic/upstream-basic.lbscene")).unwrap()).unwrap();
+    // the same triangles, indexed: shared corners welded by exact position
+    let meshes: Vec<FileMesh> = v1
+        .positions
+        .iter()
+        .map(|p| {
+            let mut seen = std::collections::HashMap::new();
+            let mut positions = Vec::new();
+            let indices = p.iter().map(|v| *seen.entry(v.to_array().map(f32::to_bits)).or_insert_with(|| { positions.push(*v); positions.len() as u32 - 1 })).collect();
+            FileMesh { positions, indices: Some(indices), ..Default::default() }
+        })
+        .collect();
+    let v2 = Scene::read(&Scene::write_v2(&v1.header, &meshes).unwrap()).unwrap();
+    assert_eq!(v2.file.version, 2);
+    assert!(v2.file.meshes[0].positions.len() < v1.positions[0].len(), "the ground's corners are shared");
+    assert_eq!(v2.positions, v1.positions);
+    let a = pollster::block_on(bake(&v1, &gpu, &Options::default())).unwrap();
+    let b = pollster::block_on(bake(&v2, &gpu, &Options::default())).unwrap();
+    assert!(a.direct == b.direct && a.indirect == b.indirect && a.validity == b.validity, "v1 and indexed v2 bake to different light");
+}
+
+#[test]
 fn upstream_basic_bakes_reproducibly_and_meets_its_expectations() {
     let Some(gpu) = gpu() else { return };
     let dir = scenes_dir().join("upstream-basic");

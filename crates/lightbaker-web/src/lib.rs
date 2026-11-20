@@ -348,7 +348,8 @@ async fn run(
         .map_err(|e| BakerError::new("invalid-scene", format!("bake config: {e:#}")))?;
     if serde_json::to_value(&scene.header).ok() != serde_json::to_value(&original).ok() {
         // the scene's hash (and so its tiles' hashes) must follow the settings actually baked
-        let rewritten = Scene::write(&scene.header, &scene.positions)
+        let rewritten = scene
+            .to_bytes()
             .map_err(|e| BakerError::invalid_scene(&e))?;
         scene = Scene::read(&rewritten).map_err(|e| BakerError::invalid_scene(&e))?;
     }

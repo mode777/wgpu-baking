@@ -49,11 +49,11 @@ pub fn scene_bytes(bx: f32) -> Vec<u8> {
         sun: Sun { direction: [-1.0, 0.8, 0.0], radius_deg: 0.5, irradiance: [3.0, 3.0, 3.0] },
         sky: Sky { zenith: [0.2, 0.25, 0.35], horizon: [0.3, 0.3, 0.32], ground: [0.1, 0.1, 0.1] },
         materials: vec![
-            Material { name: "ground".into(), albedo: [0.5, 0.5, 0.5], receives: true, casts: true, opacity: 1.0 },
-            Material { name: "grey".into(), albedo: [0.5, 0.5, 0.5], receives: true, casts: true, opacity: 1.0 },
-            Material { name: "red".into(), albedo: [0.9, 0.05, 0.05], receives: true, casts: true, opacity: 1.0 },
+            Material { name: "ground".into(), albedo: [0.5, 0.5, 0.5], receives: true, casts: true, opacity: 1.0, emission: [0.0; 3], double_sided: false },
+            Material { name: "grey".into(), albedo: [0.5, 0.5, 0.5], receives: true, casts: true, opacity: 1.0, emission: [0.0; 3], double_sided: false },
+            Material { name: "red".into(), albedo: [0.9, 0.05, 0.05], receives: true, casts: true, opacity: 1.0, emission: [0.0; 3], double_sided: false },
         ],
-        meshes: meshes.iter().map(|(n, m, p)| MeshInfo { name: n.to_string(), material: *m, triangles: (p.len() / 3) as u32 }).collect(),
+        meshes: meshes.iter().map(|(n, m, p)| MeshInfo { name: n.to_string(), material: *m, triangles: (p.len() / 3) as u32, vertices: None, arrays: None }).collect(),
         lightmap: LightmapSettings { texels_per_meter: 4.0, tile_size: 16.0, chart_angle_deg: 40.0, padding: 2, atlas_width: 1024, indirect_downscale: 2 },
         bake: BakeSettings {
             sun_samples: 16,
@@ -71,6 +71,7 @@ pub fn scene_bytes(bx: f32) -> Vec<u8> {
         },
         volume: Some(VolumeSettings { min: [0., 0.5, 0.], max: [64., 4.5, 64.], step: 2.0, rays: 128 }),
         user: serde_json::json!({ "test": true }),
+        lights: vec![],
     };
     let positions: Vec<Vec<Vec3>> = meshes.iter().map(|(_, _, p)| (*p).clone()).collect();
     Scene::write(&header, &positions).unwrap()

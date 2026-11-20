@@ -111,6 +111,7 @@ struct Work {
 
 pub async fn bake(scene: &Scene, gpu: &Gpu, o: &Options<'_>) -> Result<Bake> {
     let started = Instant::now();
+    scene.header.unsupported()?;
     let h = &scene.header;
     let (b, lm) = (&h.bake, &h.lightmap);
     let layout = Layout::build(scene)?;

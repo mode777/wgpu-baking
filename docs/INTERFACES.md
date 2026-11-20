@@ -156,6 +156,11 @@ v2 keeps the same framing and adds, per mesh, a list of typed arrays named in th
 Arrays follow the header in mesh order, then array order, each 4-byte aligned. Rust (`scene.rs`)
 and TS (`js/src/scene.ts`) implementations are tested against each other with golden files.
 
+Implemented in P3.2 ([FORMAT.md](FORMAT.md), ADR-0010): as sketched, with `meshes[].triangles` kept, the
+`material` of a mesh applying to triangles without `materialIds`, `lights` untyped JSON until P4.1, and
+lights / emission / `doubleSided` refused by the bake until P4.1–P4.3. TS: `readScene` (v1 + v2,
+`Scene.meshes` as in the file, `Scene.positions` expanded) and `writeSceneV2`.
+
 ## 6. Results
 
 ```ts
