@@ -3,9 +3,12 @@
 
 use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
 
-use anyhow::{Context, Result, anyhow};
+use anyhow::{Result, anyhow};
 use bytemuck::{Pod, Zeroable};
 use wgpu::util::DeviceExt;
+
+mod adapter;
+pub use adapter::*;
 
 use crate::bvh::Bvh;
 use crate::raster::Texel;
@@ -64,6 +67,8 @@ pub struct Gpu {
     pub adapter: String,
     /// A software (CPU) adapter such as lavapipe/llvmpipe, SwiftShader or WARP: usable only on explicit opt-in.
     pub software: bool,
+    /// the adapter, its device's granted limits, and whether it is software
+    pub report: AdapterReport,
     transfers: [AtomicU64; 4],
 }
 
@@ -77,13 +82,6 @@ pub struct Transfers {
     pub upload_bytes: u64,
 }
 
-/// Software adapters by device type or by the names they report (ADR-0009).
-pub fn is_software_adapter(name: &str, device_type: wgpu::DeviceType) -> bool {
-    let name = name.to_lowercase();
-    device_type == wgpu::DeviceType::Cpu
-        || ["llvmpipe", "lavapipe", "swiftshader", "microsoft basic render driver", "warp"].iter().any(|s| name.contains(s))
-}
-
 /// The scene as the passes read it.
 pub struct SceneBuffers {
     nodes: wgpu::Buffer,
@@ -93,23 +91,29 @@ pub struct SceneBuffers {
 }
 
 impl Gpu {
-    /// Opens the GPU, blocking until it is ready (native only; the web awaits [`Gpu::open`]).
+    /// Opens the GPU, blocking until it is ready, refusing software adapters (native only; the web awaits [`Gpu::open`]).
     #[cfg(feature = "native")]
     pub fn new() -> Result<Gpu> {
-        pollster::block_on(Self::open())
+        pollster::block_on(Self::open(&GpuOptions::default()))
     }
 
-    pub async fn open() -> Result<Gpu> {
-        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor::new_without_display_handle_from_env());
+    pub async fn open(options: &GpuOptions) -> Result<Gpu> {
+        #[cfg(feature = "web")]
+        let desc = wgpu::InstanceDescriptor { backends: wgpu::Backends::BROWSER_WEBGPU, ..wgpu::InstanceDescriptor::new_without_display_handle() };
+        #[cfg(not(feature = "web"))]
+        let desc = wgpu::InstanceDescriptor::new_without_display_handle_from_env();
+        let instance = wgpu::Instance::new(desc);
         let adapter = instance
             .request_adapter(&wgpu::RequestAdapterOptions { power_preference: wgpu::PowerPreference::HighPerformance, ..Default::default() })
             .await
-            .context("no GPU adapter")?;
+            .map_err(|e| GpuError::NoAdapter(e.to_string()))?;
         let info = adapter.get_info();
+        admit(&info.name, is_software_adapter(&info.name, info.device_type), options)?;
         let (device, queue) = adapter
-            .request_device(&wgpu::DeviceDescriptor { label: Some("lightbaker"), required_limits: adapter.limits(), ..Default::default() })
+            .request_device(&wgpu::DeviceDescriptor { label: Some("lightbaker"), required_limits: required_limits(&adapter.limits()), ..Default::default() })
             .await
-            .context("no GPU device")?;
+            .map_err(|e| GpuError::NoDevice(e.to_string()))?;
+        let report = AdapterReport::new(&info, &device.limits());
         let module = device.create_shader_module(wgpu::ShaderModuleDescriptor { label: Some("trace"), source: wgpu::ShaderSource::Wgsl(include_str!("trace.wgsl").into()) });
         let storage = |binding: u32, read_only: bool| wgpu::BindGroupLayoutEntry {
             binding,
@@ -147,9 +151,9 @@ impl Gpu {
             })
         };
         let pipelines = [pipeline("direct"), pipeline("gather"), pipeline("volume")];
-        let software = is_software_adapter(&info.name, info.device_type);
+        let software = report.software;
         let adapter = format!("{} ({:?}{})", info.name, info.backend, if software { ", software" } else { "" });
-        Ok(Gpu { device, queue, layout, pipelines, adapter, software, transfers: Default::default() })
+        Ok(Gpu { device, queue, layout, pipelines, adapter, software, report, transfers: Default::default() })
     }
 
     pub fn transfers(&self) -> Transfers {
@@ -161,25 +165,25 @@ impl Gpu {
         self.transfers.iter().for_each(|c| c.store(0, Relaxed));
     }
 
-    pub fn scene(&self, bvh: &Bvh, materials: &[[f32; 4]], charts: &[[[f32; 4]; 2]]) -> SceneBuffers {
-        SceneBuffers {
-            nodes: self.storage("nodes", bytemuck::cast_slice(&bvh.nodes)),
-            tris: self.storage("tris", bytemuck::cast_slice(&bvh.tris)),
-            materials: self.storage("materials", bytemuck::cast_slice(materials)),
-            charts: self.storage("charts", bytemuck::cast_slice(if charts.is_empty() { &[[[0f32; 4]; 2]] } else { charts })),
-        }
+    pub fn scene(&self, bvh: &Bvh, materials: &[[f32; 4]], charts: &[[[f32; 4]; 2]]) -> Result<SceneBuffers> {
+        Ok(SceneBuffers {
+            nodes: self.storage("nodes", bytemuck::cast_slice(&bvh.nodes))?,
+            tris: self.storage("tris", bytemuck::cast_slice(&bvh.tris))?,
+            materials: self.storage("materials", bytemuck::cast_slice(materials))?,
+            charts: self.storage("charts", bytemuck::cast_slice(if charts.is_empty() { &[[[0f32; 4]; 2]] } else { charts }))?,
+        })
     }
 
     /// Runs `pass` over `texels` (probes for the volume: their position, their index as the normal's w),
-    /// reading `light` (per atlas texel); returns each item's results.
-    pub fn run(&self, pass: Pass, scene: &SceneBuffers, params: Params, texels: &[Texel], light: &[[f32; 4]]) -> Result<Vec<[f32; 4]>> {
+    /// reading `light` (per atlas texel); returns each item's results. Awaits each batch's readback.
+    pub async fn run(&self, pass: Pass, scene: &SceneBuffers, params: Params, texels: &[Texel], light: &[[f32; 4]]) -> Result<Vec<[f32; 4]>> {
         let items = texels.len();
         let mut out = Vec::with_capacity(items * pass.width());
         if items == 0 {
             return Ok(out);
         }
-        let texels = self.storage("texels", bytemuck::cast_slice(texels));
-        let light = self.storage("light", bytemuck::cast_slice(if light.is_empty() { &[[0f32; 4]] } else { light }));
+        let texels = self.storage("texels", bytemuck::cast_slice(texels))?;
+        let light = self.storage("light", bytemuck::cast_slice(if light.is_empty() { &[[0f32; 4]] } else { light }))?;
         let pipeline = &self.pipelines[pass as usize];
         let mut first = 0;
         while first < items {
@@ -218,12 +222,14 @@ impl Gpu {
             enc.copy_buffer_to_buffer(&result, 0, &read, 0, size);
             self.queue.submit([enc.finish()]);
             let slice = read.slice(..);
-            let (tx, rx) = std::sync::mpsc::channel();
+            let (tx, rx) = futures_channel::oneshot::channel();
             slice.map_async(wgpu::MapMode::Read, move |r| {
                 let _ = tx.send(r);
             });
+            // natively wgpu runs the callback when polled; in the browser the promise resolves while we await
+            #[cfg(not(feature = "web"))]
             self.device.poll(wgpu::PollType::wait_indefinitely()).map_err(|e| anyhow!("GPU: {e:?}"))?;
-            rx.recv()?.map_err(|e| anyhow!("GPU read back: {e:?}"))?;
+            rx.await.map_err(|_| anyhow!("GPU read back: the device dropped the request"))?.map_err(|e| anyhow!("GPU read back: {e:?}"))?;
             out.extend_from_slice(bytemuck::cast_slice(&slice.get_mapped_range()?));
             self.transfers[0].fetch_add(1, Relaxed);
             self.transfers[1].fetch_add(1, Relaxed);
@@ -234,9 +240,10 @@ impl Gpu {
         Ok(out)
     }
 
-    fn storage(&self, label: &str, contents: &[u8]) -> wgpu::Buffer {
+    fn storage(&self, label: &str, contents: &[u8]) -> Result<wgpu::Buffer> {
+        self.report.limits.check_storage(label, contents.len() as u64)?;
         self.transfers[3].fetch_add(contents.len() as u64, Relaxed);
-        self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor { label: Some(label), contents, usage: wgpu::BufferUsages::STORAGE })
+        Ok(self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor { label: Some(label), contents, usage: wgpu::BufferUsages::STORAGE }))
     }
 }
 

@@ -7,6 +7,7 @@ use std::time::Instant;
 use anyhow::{Context, Result};
 use clap::Parser;
 use lightbaker::cache::{FsStore, TileStore};
+use lightbaker::gpu::GpuOptions;
 use lightbaker::{Gpu, Options, Scene, bake, output};
 
 #[derive(Parser)]
@@ -21,6 +22,10 @@ struct Args {
     /// where baked tiles are kept between runs (default: none, everything baked)
     #[arg(long)]
     cache: Option<PathBuf>,
+    /// bake on a software adapter (lavapipe, SwiftShader, WARP) if it is the only one: slow, results labelled;
+    /// also LIGHTBAKER_ALLOW_SOFTWARE_ADAPTER=1
+    #[arg(long)]
+    allow_software_adapter: bool,
     /// say less
     #[arg(long, short)]
     quiet: bool,
@@ -31,10 +36,14 @@ struct Args {
 
 fn main() -> Result<()> {
     let args = Args::parse();
-    let gpu = Gpu::new()?;
+    let allow_software = args.allow_software_adapter || std::env::var("LIGHTBAKER_ALLOW_SOFTWARE_ADAPTER").is_ok_and(|v| v == "1");
+    let gpu = pollster::block_on(Gpu::open(&GpuOptions { allow_software }))?;
     let store = args.cache.as_deref().map(FsStore::new).transpose()?;
     if !args.quiet {
-        eprintln!("GPU: {}", gpu.adapter);
+        eprintln!("GPU: {}", gpu.report);
+        if gpu.software {
+            eprintln!("warning: baking on a SOFTWARE ADAPTER: slow; results are not representative of a hardware GPU");
+        }
     }
     for path in &args.scenes {
         let started = Instant::now();
@@ -49,7 +58,7 @@ fn main() -> Result<()> {
         if !args.quiet {
             eprintln!("{name}:");
         }
-        let baked = bake(&scene, &gpu, &Options { cache: store.as_ref().map(|s| s as &dyn TileStore), log: &log })?;
+        let baked = pollster::block_on(bake(&scene, &gpu, &Options { cache: store.as_ref().map(|s| s as &dyn TileStore), log: &log }))?;
         let dir = args.out.clone().unwrap_or_else(|| path.parent().map(PathBuf::from).unwrap_or_default());
         std::fs::create_dir_all(&dir)?;
         let file = dir.join(format!("{name}.lbake"));

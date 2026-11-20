@@ -1,6 +1,6 @@
 # ADR-0003: Platform abstraction for native and WASM
 
-- **Status:** accepted — points 1, 3–6 implemented in P2.1 (`platform-shims`); 2, 7, 8 in P2.2
+- **Status:** accepted — points 1, 3–6 implemented in P2.1 (`platform-shims`); 2, 7, 8 in P2.2 (`async-gpu`)
 - **Date:** 2026-11-20
 - **Phase:** 2
 - **Requirements:** REQ-WASM-01 … 03, REQ-WASM-10

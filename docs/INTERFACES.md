@@ -250,14 +250,25 @@ extern "C" {
 
 ## 9. Rust engine API changes (`crates/lightbaker`)
 
-- `Gpu::open(opts) -> impl Future<Output = Result<Gpu>>` is public; `Gpu::new()` (blocking) stays
-  for native behind `feature = "native"`.
-- `bake(scene, gpu, options).await` becomes `async`; `Options` gains `progress: &dyn Fn(Progress)`,
-  `cancel: &dyn Fn() -> bool` and `store: &dyn TileStore` (replacing the `cache: Option<&Path>`).
-  The native CLI wraps it with `pollster::block_on`.
+Implemented so far (P2.1–P2.2):
+
+- `Gpu::open(&GpuOptions { allow_software }) -> impl Future<Output = Result<Gpu>>` is public; it uses
+  `Backends::BROWSER_WEBGPU` under `web`, refuses software/fallback adapters unless allowed, requests
+  WebGPU's default limits with `maxStorageBufferBindingSize`/`maxBufferSize` raised to the adapter's,
+  and exposes `Gpu::report: AdapterReport` (name, vendor, device type, backend, driver, `software`,
+  granted limits). Failures are `GpuError::{NoAdapter, SoftwareAdapterRefused, NoDevice,
+  LimitExceeded}` inside `anyhow::Error` (`downcast_ref` to map to `BakerError` kinds).
+  `Gpu::new()` (blocking, software refused) stays for native behind `feature = "native"`.
+- `bake(scene, gpu, &options).await` is `async`; native callers wrap it with `pollster::block_on`.
+  Readbacks are `map_async` + an awaited oneshot (the device is polled only natively).
+- `Options::cache: Option<&dyn TileStore>` (replacing `Option<&Path>`).
 - `trait TileStore { fn get(&self, kind: &str, hash: &Hash) -> Option<Vec<u8>>; fn put(&self, kind: &str, hash: &Hash, bytes: &[u8]) -> Result<()>; }`
-  with `FsStore` (native, zstd, upstream behaviour) and `MemoryStore` (web; IndexedDB persistence
-  is driven from JS).
+  with `FsStore` (native, zstd, upstream behaviour) and `MemoryStore` (any platform; IndexedDB
+  persistence is driven from JS).
+
+Planned:
+
+- `Options` gains `progress: &dyn Fn(Progress)` and `cancel: &dyn Fn() -> bool` (P2.4/P2.7).
 - `trait Unwrapper { fn unwrap(&self, meshes: &[MeshInput], opts: &UnwrapOptions) -> Result<UnwrapOutput>; }`
   implemented by `lightbaker-uv` (xatlas) and by the upstream planar layout.
 

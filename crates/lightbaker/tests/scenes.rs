@@ -35,10 +35,10 @@ fn upstream_basic_bakes_reproducibly_and_meets_its_expectations() {
     let log = |_: &str| {};
     let opts = Options { cache: None, log: &log };
     gpu.reset_transfers();
-    let first = bake(&scene, &gpu, &opts).unwrap();
+    let first = pollster::block_on(bake(&scene, &gpu, &opts)).unwrap();
     let t = gpu.transfers();
     assert!(t.batches > 0 && t.readbacks == t.batches && t.readback_bytes > 0 && t.upload_bytes > 0, "{t:?}");
-    let second = bake(&scene, &gpu, &opts).unwrap();
+    let second = pollster::block_on(bake(&scene, &gpu, &opts)).unwrap();
     assert!(output::write(&scene, &first).unwrap() == output::write(&scene, &second).unwrap(), "two bakes of the same scene differ");
 
     let report = expect.evaluate(&scene, &first).unwrap();
@@ -55,9 +55,9 @@ fn upstream_basic_bakes_reproducibly_and_meets_its_expectations() {
 
     // the in-memory store (the browser's) reuses every tile and probe chunk of an unchanged scene
     let store = MemoryStore::new();
-    let fresh = bake(&scene, &gpu, &Options { cache: Some(&store), log: &log }).unwrap();
+    let fresh = pollster::block_on(bake(&scene, &gpu, &Options { cache: Some(&store), log: &log })).unwrap();
     assert!(!store.is_empty());
-    let again = bake(&scene, &gpu, &Options { cache: Some(&store), log: &log }).unwrap();
+    let again = pollster::block_on(bake(&scene, &gpu, &Options { cache: Some(&store), log: &log })).unwrap();
     assert_eq!((again.stats.tiles_baked, again.stats.chunks_baked), (0, 0));
     assert!(output::write(&scene, &again).unwrap() == output::write(&scene, &first).unwrap());
     assert!(output::write(&scene, &fresh).unwrap() == output::write(&scene, &first).unwrap());

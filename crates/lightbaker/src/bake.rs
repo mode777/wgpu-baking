@@ -90,7 +90,7 @@ struct Work {
     gathered: Vec<bool>,
 }
 
-pub fn bake(scene: &Scene, gpu: &Gpu, o: &Options) -> Result<Bake> {
+pub async fn bake(scene: &Scene, gpu: &Gpu, o: &Options<'_>) -> Result<Bake> {
     let started = Instant::now();
     let h = &scene.header;
     let (b, lm) = (&h.bake, &h.lightmap);
@@ -100,7 +100,7 @@ pub fn bake(scene: &Scene, gpu: &Gpu, o: &Options) -> Result<Bake> {
     let affines: Vec<[[f32; 4]; 2]> = layout.charts.iter().enumerate().map(|(i, c)| c.affine(&layout.tiles[chart_tile[i] as usize], layout.density, layout.padding)).collect();
     let bvh = Bvh::build(scene, |m, t| layout.tri_chart[m][t]);
     let materials: Vec<[f32; 4]> = h.materials.iter().map(|m| [m.albedo[0], m.albedo[1], m.albedo[2], m.opacity]).collect();
-    let buffers = gpu.scene(&bvh, &materials, &affines);
+    let buffers = gpu.scene(&bvh, &materials, &affines)?;
     let sun = Vec3::from_array(h.sun.direction).normalize();
     let sun_dir = sun;
     let g = (b.sun_samples as f32).sqrt() as u32;
@@ -147,7 +147,7 @@ pub fn bake(scene: &Scene, gpu: &Gpu, o: &Options) -> Result<Bake> {
         .collect();
     let covered: Vec<Texel> = work.iter().flat_map(|w| w.texels.iter().filter(|t| t.covered()).copied()).collect();
     let t0 = Instant::now();
-    let direct = gpu.run(Pass::Direct, &buffers, params, &covered, &[])?;
+    let direct = gpu.run(Pass::Direct, &buffers, params, &covered, &[]).await?;
     (o.log)(&format!("sun and occlusion: {} texels, {:.1} s", covered.len(), t0.elapsed().as_secs_f64()));
 
     // geometry worth a look: materials much of whose surface lies inside solids (faces hidden inside
@@ -298,7 +298,7 @@ pub fn bake(scene: &Scene, gpu: &Gpu, o: &Options) -> Result<Bake> {
     let starts = offsets(work.iter().map(|w| w.gathered.iter().filter(|&&g| g).count()));
     for bounce in 0..b.gi_bounces {
         let t0 = Instant::now();
-        let res = gpu.run(Pass::Gather, &buffers, params, &gather, &light)?;
+        let res = gpu.run(Pass::Gather, &buffers, params, &gather, &light).await?;
         let updated: Vec<Vec<[f32; 3]>> = work
             .par_iter()
             .zip(&starts)
@@ -328,7 +328,7 @@ pub fn bake(scene: &Scene, gpu: &Gpu, o: &Options) -> Result<Bake> {
         (o.log)(&format!("bounce {}: {} texels x {} rays, {:.1} s", bounce + 1, gather.len(), b.gi_rays, t0.elapsed().as_secs_f64()));
     }
     let volume = match &h.volume {
-        Some(v) => Some(bake_volume(scene, gpu, &buffers, params, &light, v, &boxes, &global, &cache, o.log)?),
+        Some(v) => Some(bake_volume(scene, gpu, &buffers, params, &light, v, &boxes, &global, &cache, o.log).await?),
         None => None,
     };
     // texels the bake left without light of their own (a face every texel of which lies inside a

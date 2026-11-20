@@ -50,7 +50,7 @@ Witness article URLs given are wrong.
 
 ## 3. WASM blockers (exact locations)
 
-Status: B4–B7 fixed in P2.1 (`platform-shims`; the wasm32 build compiles); B1–B3, B8 in P2.2; B9 in Phase 6.
+Status: B4–B7 fixed in P2.1 (`platform-shims`; the wasm32 build compiles); B1–B3, B8 fixed in P2.2 (`async-gpu`: async `open`/`run`/`bake`, awaited readback, `BROWSER_WEBGPU` instance, explicit limits); B9 in Phase 6.
 
 | # | Location | Construct | Problem on `wasm32-unknown-unknown` + WebGPU | Fix (ADR-0003) |
 |---|---|---|---|---|

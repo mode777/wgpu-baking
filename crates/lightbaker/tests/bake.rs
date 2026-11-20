@@ -38,7 +38,7 @@ fn shadows_occlusion_bounces_and_reuse() {
     let store = lightbaker::cache::FsStore::new(&dir).unwrap();
     let opts = Options { cache: Some(&store), log: &log };
     let s = scene(8.0);
-    let b = bake(&s, &gpu, &opts).unwrap();
+    let b = pollster::block_on(bake(&s, &gpu, &opts)).unwrap();
     let l = &b.layout;
     assert_eq!(b.stats.tiles_baked, b.stats.tiles);
 
@@ -82,13 +82,13 @@ fn shadows_occlusion_bounces_and_reuse() {
     }
 
     // baked again unchanged: nothing to bake; with the box moved, only the tiles it reaches
-    let again = bake(&s, &gpu, &opts).unwrap();
+    let again = pollster::block_on(bake(&s, &gpu, &opts)).unwrap();
     assert_eq!(again.stats.tiles_baked, 0);
     assert_eq!(again.stats.chunks_baked, 0);
     assert_eq!(again.direct, b.direct);
     // the same light gives the same file, byte for byte: a pipeline that hashes it publishes nothing new
     assert!(lightbaker::output::write(&s, &again).unwrap() == lightbaker::output::write(&s, &b).unwrap(), "the .lbake differs between a bake and its cached rerun");
-    let moved = bake(&scene(6.0), &gpu, &opts).unwrap();
+    let moved = pollster::block_on(bake(&scene(6.0), &gpu, &opts)).unwrap();
     assert!(moved.stats.tiles_baked > 0 && moved.stats.tiles_baked < moved.stats.tiles, "{} of {}", moved.stats.tiles_baked, moved.stats.tiles);
     let _ = std::fs::remove_dir_all(&dir);
 }

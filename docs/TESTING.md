@@ -17,8 +17,10 @@ Requirements covered: REQ-ENG-04, REQ-ENG-05, plus the verification column of
   `LIGHTBAKER_REQUIRE_GPU=1` so a missing adapter fails the job. CI uses software adapters
   (Mesa lavapipe) explicitly allowed with `LIGHTBAKER_ALLOW_SOFTWARE_ADAPTER=1` (ADR-0009). Without
   that opt-in a software adapter counts as no adapter; with it, test output labels the adapter as
-  software. Detection: `lightbaker::gpu::is_software_adapter` (unit-tested in
-  `crates/lightbaker/tests/adapter_policy.rs`).
+  software. Detection and refusal live in the engine (`lightbaker::gpu::{is_software_adapter, admit}`,
+  unit-tested in `crates/lightbaker/src/gpu/adapter.rs`): `Gpu::open` refuses a software adapter unless
+  `GpuOptions::allow_software`, which the test helper, the CLI (`--allow-software-adapter`) and the
+  `baseline` example set from the env var.
 - **Few, cheap end-to-end tests.** Behaviour is proven at the lowest possible layer (Rust, WASM,
   Vitest with mocked workers). Browser e2e tests are limited to the budget below.
 

@@ -38,7 +38,7 @@ fn measure(name: &str, scene: &Scene, gpu: &Gpu) -> Result<Measured> {
         let log = |s: &str| lines.lock().unwrap().push((Instant::now(), s.to_string()));
         gpu.reset_transfers();
         let start = Instant::now();
-        let b = bake(scene, gpu, &Options { cache: None, log: &log })?;
+        let b = pollster::block_on(bake(scene, gpu, &Options { cache: None, log: &log }))?;
         let end = Instant::now();
         let lines = lines.into_inner().unwrap();
         let mut prev = start;
@@ -104,7 +104,8 @@ fn peak_memory_kib() -> Option<u64> {
 }
 
 fn main() -> Result<()> {
-    let gpu = Gpu::new()?;
+    let allow_software = std::env::var("LIGHTBAKER_ALLOW_SOFTWARE_ADAPTER").is_ok_and(|v| v == "1");
+    let gpu = pollster::block_on(Gpu::open(&lightbaker::gpu::GpuOptions { allow_software }))?;
     let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../test-scenes/upstream-basic/upstream-basic.lbscene");
     let basic = Scene::read(&std::fs::read(&path)?)?;
     let mut dense = Scene::read(&std::fs::read(&path)?)?;
@@ -114,7 +115,7 @@ fn main() -> Result<()> {
     dense.header.bake.gi_bounces = 3;
     let results = vec![measure("upstream-basic", &basic, &gpu)?, measure("upstream-basic-dense", &dense, &gpu)?];
 
-    println!("adapter: {}{}", gpu.adapter, if gpu.software { " [software]" } else { "" });
+    println!("adapter: {}", gpu.report);
     for m in &results {
         let t = &m.transfers;
         println!("\n{} ({} triangles, atlas {}x{}, light atlas {:.1} MiB): median of {RUNS} bakes {:.1} ms", m.scene, m.triangles, m.atlas.0, m.atlas.1, m.light_atlas_bytes as f64 / 1048576.0, m.total_ms);
@@ -131,7 +132,7 @@ fn main() -> Result<()> {
     }
     if let Some(i) = std::env::args().position(|a| a == "--json") {
         let out = std::env::args().nth(i + 1).expect("--json <file>");
-        let json = serde_json::json!({ "adapter": gpu.adapter, "software": gpu.software, "runs": RUNS, "peakMemoryKiB": peak_memory_kib(), "scenes": results });
+        let json = serde_json::json!({ "adapter": gpu.adapter, "software": gpu.software, "report": gpu.report, "runs": RUNS, "peakMemoryKiB": peak_memory_kib(), "scenes": results });
         std::fs::write(out, serde_json::to_string_pretty(&json)?)?;
     }
     Ok(())

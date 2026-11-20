@@ -31,7 +31,7 @@ pub struct Volume {
 }
 
 #[allow(clippy::too_many_arguments)]
-pub fn bake_volume(scene: &Scene, gpu: &Gpu, buffers: &SceneBuffers, mut params: Params, light: &[[f32; 4]], v: &VolumeSettings, boxes: &Boxes, global: &blake3::Hash, cache: &Cache, log: &(dyn Fn(&str) + Sync)) -> Result<Volume> {
+pub async fn bake_volume(scene: &Scene, gpu: &Gpu, buffers: &SceneBuffers, mut params: Params, light: &[[f32; 4]], v: &VolumeSettings, boxes: &Boxes, global: &blake3::Hash, cache: &Cache<'_>, log: &(dyn Fn(&str) + Sync)) -> Result<Volume> {
     let started = Instant::now();
     let n = |a: usize| ((v.max[a] - v.min[a]) / v.step).round() as u32 + 1;
     let size = [n(0).max(2), n(1).max(2), n(2).max(2)];
@@ -74,7 +74,7 @@ pub fn bake_volume(scene: &Scene, gpu: &Gpu, buffers: &SceneBuffers, mut params:
         })
         .collect();
     params.counts[2] = v.rays;
-    let res = gpu.run(Pass::Volume, buffers, params, &items, light)?;
+    let res = gpu.run(Pass::Volume, buffers, params, &items, light).await?;
     for (i, &k) in todo.iter().enumerate() {
         probes[k as usize] = [res[i * 4], res[i * 4 + 1], res[i * 4 + 2], res[i * 4 + 3]];
     }
