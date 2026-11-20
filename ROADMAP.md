@@ -77,7 +77,7 @@ the browser on WebGPU. **Deliverable:** browser PoC page baking `upstream-basic`
 - [x] **P2.5** `browser-poc` — Minimal `app/` (Vite, no React editor yet): baker worker (ADR-0002),
       loads `upstream-basic.lbscene`, bakes, shows adapter info, progress, timings and the
       direct/indirect textures on a simple Three.js view.
-- [ ] **P2.6** `browser-ci` — CI `web` job (lavapipe + xvfb, Chrome WebGPU flags) with the first
+- [x] **P2.6** `browser-ci` — CI `web` job (lavapipe + xvfb, Chrome WebGPU flags) with the first
       two e2e specs of the budget (TESTING.md): `bake-poc.spec.ts` (CI-sized `upstream-basic`,
       metrics vs `expect.json`, cancel + rebake) and `no-webgpu.spec.ts`. Software adapter allowed
       and labelled.

@@ -56,6 +56,14 @@ Rules:
 
 ## Consequences
 
+- **Finding (P2.6):** on `ubuntu-latest` without a GPU, Chromium and Google Chrome expose **only their
+  built-in SwiftShader WebGPU adapter** (`google/swiftshader`, `isFallbackAdapter`), with or without
+  `--enable-features=Vulkan`, `--use-vulkan=native`, `VK_DRIVER_FILES` pointing at lavapipe, etc.
+  (`app/scripts/adapter-probe.mjs`, CI run 44765129072). The browser job therefore bakes on SwiftShader
+  (a Vulkan implementation on the CPU), the native `rust-gpu` job on lavapipe. Both are software
+  adapters, explicitly allowed and labelled; the Phase 2 exit criterion "on lavapipe in CI" is met in
+  that sense (native: lavapipe; browser: Chrome's software adapter).
+
 - Timing numbers from CI are meaningless; performance targets are checked on real GPUs manually
   (phase reports) or via `gpu-perf`.
 - Lavapipe/WARP may hide driver-specific bugs on real GPUs → phase reports include real-GPU runs.

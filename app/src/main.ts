@@ -25,8 +25,16 @@ const fmtMs = (ms: number) => (ms < 1000 ? `${ms.toFixed(0)} ms` : `${(ms / 1000
 const mib = (b: number) => `${(b / 1048576).toFixed(2)} MiB`;
 
 $('profile').textContent = profile in PROFILES ? profile : `${profile} (unknown: using full)`;
-const view = new LightmapView($('view'));
-document.querySelectorAll<HTMLInputElement>('input[name=mode]').forEach((r) => r.addEventListener('change', () => view.setMode(r.value as ViewMode)));
+const view = (() => {
+  try {
+    return new LightmapView($('view'));
+  } catch (e) {
+    // no WebGL here: the baker does not need it, only the 3D view does
+    $('view').insertAdjacentHTML('beforeend', `<p class="warn" data-testid="no-view" style="padding: 40px">3D view unavailable: ${e instanceof Error ? e.message : String(e)}</p>`);
+    return null;
+  }
+})();
+document.querySelectorAll<HTMLInputElement>('input[name=mode]').forEach((r) => r.addEventListener('change', () => view?.setMode(r.value as ViewMode)));
 
 const client = new BakerClient(new Worker(new URL('./bake/baker.worker.ts', import.meta.url), { type: 'module' }));
 let sceneBytes: Uint8Array | null = null;
@@ -54,7 +62,7 @@ client.onError = (e) => {
 async function start() {
   const [init, scene] = await Promise.all([client.init(allowFallbackAdapter), fetch(sceneUrl).then((r) => r.arrayBuffer())]);
   sceneBytes = new Uint8Array(scene);
-  view.setScene(sceneBytes);
+  view?.setScene(sceneBytes);
   if (!init.caps.webgpu) {
     setStatus(`WebGPU baking is unavailable: ${init.caps.reason ?? 'unknown reason'}`, 'bad');
     document.body.dataset.state = 'no-webgpu';
@@ -99,7 +107,7 @@ async function bake() {
   try {
     const out = await run.result;
     showResult(out, phaseEnds);
-    await view.showBake(sceneBytes, out);
+    await view?.showBake(sceneBytes, out);
     document.body.dataset.state = out.checks?.passed ? 'done' : 'checks-failed';
   } catch (e) {
     const f = e as BakeFailure;

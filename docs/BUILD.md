@@ -76,7 +76,7 @@ pnpm -C app typecheck        # verified P2.5
 pnpm -C app test             # verified P2.5: worker protocol with a fake bridge (Vitest)
 pnpm -C app dev              # Vite dev server; open the printed URL in Chrome/Edge
 pnpm -C app build            # verified P2.5: production build in app/dist
-pnpm -C app e2e              # (P2.6) small Playwright set (Chrome with WebGPU enabled), see TESTING.md
+pnpm -C app e2e              # verified P2.6: bake-poc + no-webgpu specs (Playwright), see TESTING.md for switches
 node app/scripts/hw-check.mjs   # manual real-GPU check (run in app/ after build): bake, cancel, rebake → JSON
 ```
 
@@ -121,10 +121,11 @@ Standard GitHub-hosted runners only; GPU work runs on software adapters (Mesa la
 Each job should stay under ~10 minutes. Performance numbers from software adapters are not
 meaningful; real-GPU measurements go into the phase reports.
 
-Workflow: [.github/workflows/ci.yml](../.github/workflows/ci.yml). Status: `rust-native`, `rust-gpu` (P1.3)
-and `wasm` (P2.3: wasm32 build of `lightbaker` with `web`, web-feature unit tests, and a guard that fails
-if `pollster`, `rayon` or `zstd` enter the web dependency tree) exist; `wasm-pack`/`wasm-bindgen-test`
-join `wasm` with P2.4, `web` arrives with P2.6. New crates are added to the
+Workflow: [.github/workflows/ci.yml](../.github/workflows/ci.yml). Status: `rust-native`, `rust-gpu` (P1.3),
+`wasm` (P2.3–P2.4: wasm32 build of `lightbaker` with `web`, a guard that fails if `pollster`, `rayon` or
+`zstd` enter the web dependency tree, web-feature unit tests, bridge clippy, `wasm-pack build` and
+`wasm-pack test --node`) and `web` (P2.6: pnpm install, `js` tests, wasm package, typecheck, Vitest, app
+build, Playwright e2e headed under `xvfb-run` with `E2E_ALLOW_FALLBACK=1`; Chromium uses its SwiftShader WebGPU adapter there, ADR-0009) exist. New crates are added to the
 `CLIPPY_CRATES` list there to be linted with `-D warnings`.
 
 GPU test environment variables (read by the test helper in `crates/lightbaker/tests/bake.rs`):

@@ -6,3 +6,5 @@ pkg/
 dist/
 node_modules/
 /app/hw-check.*
+/app/test-results/
+/app/playwright-report/
