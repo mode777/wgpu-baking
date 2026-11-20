@@ -28,6 +28,13 @@ test('bakes upstream-basic in the worker, cancels, and rebakes', async ({ page }
   await expect(page.getByTestId('outcome')).toContainText(software ? 'SOFTWARE ADAPTER' : 'baked');
   console.log(`timings: ${(await page.getByTestId('timings').innerText()).replace(/\s+/g, ' ')}`);
 
+  // lightmap UVs (P3.6): xatlas-wasm in the worker, called by the engine through the bridge; its UV checks hold
+  await page.locator('#unwrap').click();
+  await expect(page.locator('#unwrap-summary')).toHaveAttribute('data-valid', /^(true|false)$/, { timeout: 60_000 });
+  console.log(`unwrap: ${await page.locator('#unwrap-summary').textContent()}`);
+  await expect(page.locator('#unwrap-summary')).toHaveAttribute('data-valid', 'true');
+  await expect(page.locator('#unwrap-result td.good')).toHaveCount(4);
+
   // cancel a full bake once it is under way
   await page.getByTestId('reuse').uncheck();
   await page.getByTestId('bake').click();

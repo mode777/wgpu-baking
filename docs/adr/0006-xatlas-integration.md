@@ -137,3 +137,16 @@ Validity suite (`crates/lightbaker-uv/tests/validity.rs`): a 2 m quad (one chart
 tile, a UV sphere, a 16 384-triangle torus knot (unwrapped twice: identical) — all checks pass and median
 chart density is within ±20 % of the request (upstream-basic's sub-texel strip has no chart big enough to
 measure). The torus knot takes ≈ 2 s natively, like the wasm build: chart computation dominates on both.
+
+## Browser path (P3.6)
+
+The adapter is **passed in**, not imported by module path: `lightbaker-web` declares an extern type
+`JsUnwrapper` (any object with `unwrapTile(meshes, options)`) that implements `lightbaker::unwrap::Unwrapper`,
+and exports `unwrapScene(scene, config, unwrapper)`, which runs the engine's `unwrap_scene` and `check_uvs`.
+The worker binds `app/src/bake/xatlasUnwrapper.ts` to the loaded module and passes it. This keeps the wasm
+package independent of the app's file layout and of where `xatlas-wasm` resolves; tests pass fakes.
+
+**Equivalence** (`test-scenes/uv-equivalence/`, 4 meshes, 1 566 triangles): through the bridge with
+`xatlas-wasm` (clang/wasm) the tile sizes, chart counts, `xref` and indices equal the native (MSVC) unwrap
+exactly; UVs differ by at most 1.1·10⁻⁴ texel (libm/rounding). Tolerance: 0.01 texel; Linux/gcc is held to the
+same fixture in CI.

@@ -123,6 +123,16 @@ Parsed and evaluated by `lightbaker::expect` (unknown fields are rejected):
 - Native and web unwraps are **equivalent** (same chart count, all validity checks pass, UVs within
   a small epsilon); each target is bit-deterministic with itself (ADR-0006: different compilers).
 
+Present (P3.5–P3.6): `cargo test -p lightbaker-uv` — `tests/validity.rs` (quad sizing, 3-material box,
+`upstream-basic` meshes, UV sphere, 16 k-triangle torus knot twice: identical, bad input) and
+`tests/equivalence.rs`; `app/test/xatlas.test.ts` — the same checks over `xatlas-wasm` in Node, and the
+equivalence scene through the bridge (`initSync`) + `xatlas-wasm`. **Equivalence fixture**
+`test-scenes/uv-equivalence/` (quad, box, sphere, torus knot at 16 texels/m; regenerate with
+`cargo run -p lightbaker-uv --example export-uv-equivalence`): `native.json` is the native unwrap; native and
+web must match its tile sizes, chart counts, `xref` and indices exactly and its UVs within 0.01 texel
+(measured: wasm vs MSVC ≤ 1.1·10⁻⁴ texel). The browser e2e unwraps `upstream-basic` through the bridge.
+Overlap/padding rasterisation checks come with P3.9.
+
 All deterministic scenes run natively in CI (`rust-gpu`, CI bake profile). In the browser, CI runs
 only `upstream-basic` (e2e budget); browser parity for the other scenes is checked in phase reports
 on real GPUs.

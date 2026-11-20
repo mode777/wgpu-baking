@@ -8,10 +8,11 @@ repository.workspace = true
 
 [dependencies]
 anyhow.workspace = true
+glam.workspace = true
 lightbaker = { path = "../lightbaker", default-features = false }
 
 [build-dependencies]
 cc.workspace = true
 
 [dev-dependencies]
-glam.workspace = true
+serde_json.workspace = true

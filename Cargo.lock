@@ -669,6 +669,7 @@ dependencies = [
  "cc",
  "glam",
  "lightbaker",
+ "serde_json",
 ]
 
 [[package]]

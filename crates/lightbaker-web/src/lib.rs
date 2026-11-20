@@ -5,6 +5,7 @@
 
 pub mod config;
 pub mod errors;
+pub mod unwrap;
 
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;

@@ -4,11 +4,14 @@ import { readScene } from '@orbitoon/lightbaker';
 import * as THREE from 'three';
 import { beforeAll, describe, expect, it } from 'vitest';
 import type { XAtlasModule } from 'xatlas-wasm';
+import { initSync, unwrapScene as bridgeUnwrapScene } from 'lightbaker-web';
 import { checkUvs } from '../src/bake/uvValidity';
 import { loadXatlas, unwrapTile, type UnwrapMesh } from '../src/bake/xatlasUnwrapper';
 
 let xatlas: XAtlasModule;
 beforeAll(async () => {
+  // the bridge (built by `pnpm build:wasm`), for the paths through the engine's unwrap
+  initSync({ module: readFileSync(fileURLToPath(new URL('../../crates/lightbaker-web/pkg/lightbaker_web_bg.wasm', import.meta.url))) });
   const t = performance.now();
   xatlas = await loadXatlas();
   console.log(`xatlas-wasm loaded in ${(performance.now() - t).toFixed(0)} ms`);
@@ -91,13 +94,39 @@ describe('unwrap request in the worker core', () => {
       terminate: () => {},
     };
     const bridge = { capabilities: async () => ({ webgpu: false, reason: 'node' }), create: async () => Promise.reject(new Error('no GPU in Node')) };
-    const core = createBakerCore(bridge, (e) => queueMicrotask(() => worker.onmessage?.({ data: e } as MessageEvent)), undefined, unwrapScene);
+    const core = createBakerCore(bridge, (e) => queueMicrotask(() => worker.onmessage?.({ data: e } as MessageEvent)), undefined, (s, c) => unwrapScene(s, c, bridgeUnwrapScene));
     const client = new BakerClient(worker);
     const scene = readFileSync(fileURLToPath(new URL('../../test-scenes/upstream-basic/upstream-basic.lbscene', import.meta.url)));
     const r = await client.unwrap(scene.buffer.slice(scene.byteOffset, scene.byteOffset + scene.byteLength), { texelsPerMeter: 4, padding: 2 }).result;
     expect(r.meshes.map((m) => m.name)).toEqual(['ground', 'box', 'wall', 'strip']);
     expect(r.meshes.every((m) => m.valid)).toBe(true);
+    expect(r.meshes.map((m) => m.report.badXref + m.report.flipped)).toEqual([0, 0, 0, 0]);
     expect(r.meshes.map((m) => m.triangles)).toEqual([512, 12, 12, 2]);
     expect(r.meshes[0]!.width).toBeGreaterThanOrEqual(256);
+  });
+});
+describe('native/web equivalence (P3.6)', () => {
+  it('bridge + xatlas-wasm unwrap the equivalence scene like the native fixture', async () => {
+    const { unwrapScene } = await import('../src/bake/unwrapScene');
+    const dir = new URL('../../test-scenes/uv-equivalence/', import.meta.url);
+    const scene = new Uint8Array(readFileSync(fileURLToPath(new URL('uv-equivalence.lbscene', dir))));
+    const fixture = JSON.parse(readFileSync(fileURLToPath(new URL('native.json', dir)), 'utf8')) as {
+      texelsPerMeter: number;
+      padding: number;
+      meshes: { name: string; width: number; height: number; charts: number; triangles: number; xref: number[]; indices: number[]; uv: number[] }[];
+    };
+    const r = await unwrapScene(scene, { texelsPerMeter: fixture.texelsPerMeter, padding: fixture.padding }, bridgeUnwrapScene);
+    expect(r.meshes.map((m) => m.name)).toEqual(fixture.meshes.map((m) => m.name));
+    r.meshes.forEach((m, i) => {
+      const e = fixture.meshes[i]!;
+      expect(m.valid, `${m.name}: ${JSON.stringify(m.report)}`).toBe(true);
+      expect({ width: m.width, height: m.height, charts: m.charts, triangles: m.triangles }, m.name).toEqual({ width: e.width, height: e.height, charts: e.charts, triangles: e.triangles });
+      expect(Array.from(m.xref), `${m.name}: xref`).toEqual(e.xref);
+      expect(Array.from(m.indices), `${m.name}: indices`).toEqual(e.indices);
+      // the tolerance of crates/lightbaker-uv/tests/equivalence.rs (ADR-0006, P3.6)
+      const worst = Array.from(m.uv).reduce((w, u, k) => Math.max(w, Math.abs(u - e.uv[k]!)), 0);
+      console.log(`${m.name}: ${m.triangles} triangles, ${m.width}×${m.height}, ${m.charts} charts; UVs within ${worst} texels of native`);
+      expect(worst, `${m.name}: UVs`).toBeLessThanOrEqual(0.01);
+    });
   });
 });

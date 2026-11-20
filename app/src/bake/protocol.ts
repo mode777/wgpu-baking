@@ -3,6 +3,8 @@
  * PoC's additions: `init.allowFallbackAdapter`, `ready`, `bake.expect` and `done.result.checks`).
  */
 
+import type { UvReport } from './uvValidity';
+
 export type Id = string;
 
 export type BakePhase = 'layout' | 'direct' | 'bounce' | 'volume';
@@ -101,8 +103,9 @@ export interface UnwrappedMeshResult {
   xref: Uint32Array;
   indices: Uint32Array;
   ms: number;
-  /** UV validity (docs/TESTING.md) */
+  /** UV validity (docs/TESTING.md), checked by the engine */
   valid: boolean;
+  report: UvReport;
 }
 
 export interface UnwrapResult {

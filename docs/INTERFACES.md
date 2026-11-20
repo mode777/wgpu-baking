@@ -241,11 +241,12 @@ baker (a new worker and device; the tile store is lost with the old worker). `{ 
 'debug-lose-device' }` (debug sessions, `?debug=1`) destroys the worker's device for manual checks.
 The protocol logic is `app/src/bake/bakerCore.ts` (tested with a fake bridge).
 
-`unwrap` (P3.1): `{ type: 'unwrap'; jobId; scene; config: { texelsPerMeter, padding, xatlas? } }` →
+`unwrap` (P3.1, through the bridge since P3.6): `{ type: 'unwrap'; jobId; scene; config: { texelsPerMeter, padding, xatlas? } }` →
 `{ type: 'unwrapped'; jobId; result: { loadMs, meshes: [{ name, width, height, charts, utilisation,
-triangles, uv, xref, indices, ms, valid }] }; elapsedMs }`: each mesh of the `.lbscene` is one object tile,
-unwrapped with `xatlas-wasm` in the worker (`app/src/bake/unwrapScene.ts`); `uv` in tile texels; arrays
-transferred. Not yet used by the bake (P3.3–P3.8).
+triangles, uv, xref, indices, ms, valid, report }] }; elapsedMs }`: each mesh of the `.lbscene` is one object
+tile; the bridge's `unwrapScene` runs the engine's unwrap and UV checks (`report`: `UvReport`) and calls
+`xatlas-wasm` in the worker through `app/src/bake/xatlasUnwrapper.ts` (`app/src/bake/unwrapScene.ts`);
+`uv` in tile texels; arrays transferred. Not yet used by the bake (P3.7–P3.8).
 The browser's `GPUAdapterInfo` (vendor, architecture) completes the adapter report and also decides
 whether it is a software adapter (Chrome need not set `isFallbackAdapter` for lavapipe).
 
@@ -296,14 +297,25 @@ camelCase:
   `device-lost` and must be recreated.
 
 ```rust
-// xatlas on the web (ADR-0006): implemented in app/src/bake/xatlasUnwrapper.ts over `xatlas-wasm`,
-// loaded once in the worker before `WebBaker::create`; synchronous after loading.
-#[wasm_bindgen(raw_module = "/src/bake/xatlasUnwrapper.ts")]   // final path/binding style fixed in P3.6
-extern "C" {
-    #[wasm_bindgen(catch)]
-    fn xatlas_unwrap_tile(input: &JsValue, options: &JsValue) -> Result<JsValue, JsValue>;
+// xatlas on the web (ADR-0006, P3.6): the worker passes any object with `unwrapTile(meshes, options)` —
+// app/src/bake/xatlasUnwrapper.ts bound to the loaded `xatlas-wasm` module; synchronous after loading.
+#[wasm_bindgen] extern "C" {
+    #[wasm_bindgen(typescript_type = "JsUnwrapper")] pub type JsUnwrapper;   // implements lightbaker::unwrap::Unwrapper
+    #[wasm_bindgen(method, catch, js_name = unwrapTile)]
+    fn unwrap_tile(this: &JsUnwrapper, meshes: &Array, options: &JsValue) -> Result<JsValue, JsValue>;
 }
+#[wasm_bindgen(js_name = unwrapScene)]
+pub fn unwrap_scene_js(scene: &[u8], config: JsValue, unwrapper: &JsUnwrapper) -> Result<JsValue, JsValue>;
+// config: { texelsPerMeter, padding, xatlas?: { maxChartArea?, …, maxIterations?, bruteForcePacking? } }
+// → [{ name, width, height, charts, utilisation, triangles, uv: Float32Array, xref: Uint32Array,
+//      indices: Uint32Array, ms, valid, report: UvReport }]   one object tile per engine mesh
+// rejects { kind: 'invalid-scene' | 'internal', message }   (a throwing unwrapper → internal)
 ```
+
+`JsUnwrapMesh = { positions: Float32Array; indices?; normals?; materialIds? }`, `JsUnwrapOptions = {
+texelsPerMeter, padding, chart: { …only the set options }, bruteForce }`, `JsUnwrappedTile = { width, height,
+charts, utilisation, meshes: [{ uv, xref, indices, chart: Int32Array, charts }] }` (declared in the package's
+`.d.ts`).
 
 ## 9. Rust engine API changes (`crates/lightbaker`)
 
@@ -329,11 +341,15 @@ Implemented so far (P2.1–P2.2):
   with `FsStore` (native, zstd, upstream behaviour) and `MemoryStore` (any platform; IndexedDB
   persistence is driven from JS).
 
+- `lightbaker::unwrap` (P3.5–P3.6): `trait Unwrapper { fn unwrap(&self, meshes: &[MeshInput], options:
+  &UnwrapOptions) -> Result<UnwrappedTile>; }` (one object tile a call), `check_uvs` → `UvReport`, and
+  `unwrap_scene(scene, &dyn Unwrapper, &options) -> Result<Vec<SceneMeshUnwrap>>` (one tile per engine mesh).
+  Implemented by `lightbaker_uv::XatlasUnwrapper` (native) and `lightbaker_web::unwrap::JsUnwrapper`
+  (browser).
+
 Planned:
 
-- `WebBaker::unwrap(scene, lightmap_json)` (Phase 3).
-- `trait Unwrapper { fn unwrap(&self, meshes: &[MeshInput], opts: &UnwrapOptions) -> Result<UnwrapOutput>; }`
-  implemented by `lightbaker-uv` (xatlas) and by the upstream planar layout.
+- The planar layout behind the same contract, and the unwrap inside `bake` (P3.7).
 
 ## 10. Export bundle
 

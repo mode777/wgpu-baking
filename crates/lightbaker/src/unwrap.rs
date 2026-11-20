@@ -22,11 +22,17 @@ pub struct MeshInput<'a> {
 #[derive(Clone, Debug, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct ChartOptions {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub max_chart_area: Option<f32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub max_boundary_length: Option<f32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub normal_deviation_weight: Option<f32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub roundness_weight: Option<f32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub straightness_weight: Option<f32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub max_iterations: Option<u32>,
 }
 
@@ -70,7 +76,8 @@ pub trait Unwrapper {
 }
 
 /// How an unwrap of one mesh measures up (docs/TESTING.md).
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct UvReport {
     pub triangles: usize,
     /// UVs outside the tile
@@ -145,6 +152,37 @@ pub fn check_uvs(input: &MeshInput, out: &UnwrappedMesh, width: u32, height: u32
     UvReport { triangles: tris, out_of_range, degenerate, flipped, bad_xref, mixed_charts, density }
 }
 
+/// One scene mesh's unwrap: its object tile and how its UVs measure up.
+#[derive(Clone, Debug)]
+pub struct SceneMeshUnwrap {
+    pub name: String,
+    pub tile: UnwrappedTile,
+    pub report: UvReport,
+    pub ms: f64,
+}
+
+/// Unwraps every engine mesh of a scene (v2 meshes split per material) as its own object tile: its triangle
+/// soup and, if the scene has them, its vertex normals. The same natively and in the browser.
+pub fn unwrap_scene(scene: &crate::Scene, unwrapper: &dyn Unwrapper, options: &UnwrapOptions) -> Result<Vec<SceneMeshUnwrap>> {
+    let to_arrays = |v: &[Vec3]| v.iter().map(|p| p.to_array()).collect::<Vec<_>>();
+    scene
+        .positions
+        .iter()
+        .enumerate()
+        .map(|(i, p)| {
+            let started = web_time::Instant::now();
+            let positions = to_arrays(p);
+            let normals = scene.normals.get(i).and_then(|n| n.as_deref()).map(to_arrays);
+            let input = MeshInput { positions: &positions, indices: None, normals: normals.as_deref(), material_ids: None };
+            let name = &scene.header.meshes[i].name;
+            let tile = unwrapper.unwrap(&[input], options).map_err(|e| e.context(format!("unwrapping {name}")))?;
+            anyhow::ensure!(tile.meshes.len() == 1, "unwrapping {name}: {} meshes back for one", tile.meshes.len());
+            let report = check_uvs(&input, &tile.meshes[0], tile.width, tile.height, options.texels_per_meter);
+            Ok(SceneMeshUnwrap { name: name.clone(), tile, report, ms: started.elapsed().as_secs_f64() * 1000.0 })
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -179,5 +217,49 @@ mod tests {
         out.indices = vec![0, 2, 1, 0, 2, 3];
         let r = check_uvs(&MeshInput { positions: &p, indices: Some(&[0, 2, 1, 0, 2, 3]), normals: None, material_ids: None }, &out, 10, 10, 8.0);
         assert_eq!(r.flipped, 1);
+    }
+
+    /// Lays each triangle out on its own: corner k of triangle t at (4t + k, k).
+    struct PerTriangle;
+
+    impl Unwrapper for PerTriangle {
+        fn unwrap(&self, meshes: &[MeshInput], _: &UnwrapOptions) -> Result<UnwrappedTile> {
+            let n = meshes[0].positions.len();
+            let uv = (0..n)
+                .map(|c| {
+                    let x = (c / 3 * 4) as f32;
+                    [[x, 0.0], [x, 2.0], [x + 2.0, 0.0]][c % 3]
+                })
+                .collect();
+            let mesh = UnwrappedMesh { uv, xref: (0..n as u32).collect(), indices: (0..n as u32).collect(), chart: (0..n as i32).map(|c| c / 3).collect(), charts: n as u32 / 3 };
+            Ok(UnwrappedTile { width: (n / 3 * 4) as u32, height: 3, meshes: vec![mesh], charts: n as u32 / 3, utilisation: 0.5 })
+        }
+    }
+
+    #[test]
+    fn a_scene_is_unwrapped_one_tile_a_mesh() {
+        use crate::scene::*;
+        let header = SceneHeader {
+            meshes: vec![
+                MeshInfo { name: "a".into(), material: 0, triangles: 1, vertices: None, arrays: None },
+                MeshInfo { name: "b".into(), material: 0, triangles: 2, vertices: None, arrays: None },
+            ],
+            materials: vec![Material { name: "m".into(), albedo: [0.5; 3], receives: true, casts: true, opacity: 1.0, emission: [0.0; 3], double_sided: false }],
+            ..serde_json::from_value(serde_json::json!({
+                "sun": { "direction": [0, 1, 0], "radiusDeg": 0.5, "irradiance": [1, 1, 1] },
+                "sky": { "zenith": [0, 0, 0], "horizon": [0, 0, 0], "ground": [0, 0, 0] },
+                "materials": [], "meshes": [],
+                "lightmap": { "texelsPerMeter": 4, "tileSize": 16, "chartAngleDeg": 40, "padding": 2, "atlasWidth": 1024, "indirectDownscale": 2 },
+                "bake": { "sunSamples": 1, "aoRays": 1, "aoReach": 1, "aoStrength": 1, "aoFloor": 0, "aoContrast": 1, "sdfRadius": 1, "giRays": 1, "giBounces": 1, "giReach": 1, "insideShare": 0, "giFilter": 0 }
+            }))
+            .unwrap()
+        };
+        let v = |x: f32, z: f32| Vec3::new(x, 0.0, z);
+        let tri = |o: f32| [v(o, 0.0), v(o, 1.0), v(o + 1.0, 0.0)];
+        let positions = vec![tri(0.0).to_vec(), [tri(2.0), tri(4.0)].concat()];
+        let scene = crate::Scene::read(&crate::Scene::write(&header, &positions).unwrap()).unwrap();
+        let options = UnwrapOptions { texels_per_meter: 1.0, padding: 0, chart: ChartOptions::default(), brute_force: false };
+        let out = unwrap_scene(&scene, &PerTriangle, &options).unwrap();
+        assert_eq!(out.iter().map(|m| (m.name.as_str(), m.tile.width, m.report.triangles)).collect::<Vec<_>>(), [("a", 4, 1), ("b", 8, 2)]);
     }
 }

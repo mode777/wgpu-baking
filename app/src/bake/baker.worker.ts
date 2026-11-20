@@ -4,7 +4,7 @@
  * `BakeRequest` messages. All logic is in `bakerCore.ts`; this file only wires it to `lightbaker-web`.
  */
 
-import init, { WebBaker, capabilities } from 'lightbaker-web';
+import init, { WebBaker, capabilities, unwrapScene as bridgeUnwrapScene } from 'lightbaker-web';
 import { createBakerCore, type Bridge, type BridgeBaker } from './bakerCore';
 import { unwrapScene } from './unwrapScene';
 import type { BakeRequest } from './protocol';
@@ -34,7 +34,10 @@ const bridge: Bridge = {
   },
 };
 
-const core = createBakerCore(bridge, (event, transfer) => self.postMessage(event, { transfer: transfer ?? [] }), undefined, (scene, config) => unwrapScene(scene, config));
+const core = createBakerCore(bridge, (event, transfer) => self.postMessage(event, { transfer: transfer ?? [] }), undefined, async (scene, config) => {
+  await ready;
+  return unwrapScene(scene, config, bridgeUnwrapScene);
+});
 
 self.onmessage = (e: MessageEvent<BakeRequest>) => {
   void core.handle(e.data);

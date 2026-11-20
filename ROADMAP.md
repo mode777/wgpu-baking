@@ -114,7 +114,7 @@ Requirements: REQ-WASM-01 … 04, -06, -07, -08 (basic), -10; REQ-ENG-05 (first 
 - [x] **P3.4** `uv-space-raster` — Rasterise from UVs; interpolated vertex normals.
 - [x] **P3.5** `xatlas-native` — `crates/lightbaker-uv` with vendored `jpcy/xatlas@f700c77` + FFI;
       `Unwrapper` trait; UV validity test suite (TESTING.md).
-- [ ] **P3.6** `xatlas-web` — JS adapter over `xatlas-wasm` imported by `lightbaker-web`; UV validity
+- [x] **P3.6** `xatlas-web` — JS adapter over `xatlas-wasm` imported by `lightbaker-web`; UV validity
       suite in the browser path; native/web equivalence test.
 - [ ] **P3.7** `object-tiles-pages` — Object tiles packed by xatlas, shelved by upstream
       `shelve()`; multiple pages; tile reuse after moving one object.
