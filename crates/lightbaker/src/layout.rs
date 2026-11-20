@@ -120,6 +120,14 @@ impl Layout {
         Ok(Layout { charts, tiles, width: s.atlas_width, height, density, padding, tri_chart })
     }
 
+    /// A chart's triangle's corners in its tile's texels (the texel's centre at whole numbers plus a half): what
+    /// the rasteriser scans. Planar charts project their corners (ADR-0004: one place for any unwrapper's UVs).
+    pub fn triangle_uvs(&self, scene: &Scene, chart: u32, t: usize) -> [Vec2; 3] {
+        let c = &self.charts[chart as usize];
+        let p = &scene.positions[c.mesh as usize][t * 3..t * 3 + 3];
+        [0, 1, 2].map(|k| c.local(p[k], self.density, self.padding))
+    }
+
     /// Each chart's tile (by index into `tiles`).
     pub fn chart_tile(&self) -> Vec<u32> {
         let mut out = vec![0; self.charts.len()];

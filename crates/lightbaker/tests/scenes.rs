@@ -199,3 +199,35 @@ fn upstream_basic_matches_its_reference_values() {
     }
     eprintln!("largest difference from the reference: {} at {}", worst.0, worst.1);
 }
+/// A tile's own vertex normals are in its hash (raster.rs uses them): editing one rebakes that tile, not others.
+#[test]
+fn normal_edit_rebakes_its_tile() {
+    use lightbaker::cache::MemoryStore;
+    use lightbaker::scene::FileMesh;
+    let Some(gpu) = gpu() else { return };
+    let v1 = Scene::read(&std::fs::read(scenes_dir().join("upstream-basic/upstream-basic.lbscene")).unwrap()).unwrap();
+    // upstream-basic with face normals per corner (v2, non-indexed)
+    let with_normals = |tilt: f32| {
+        let meshes: Vec<FileMesh> = v1
+            .positions
+            .iter()
+            .enumerate()
+            .map(|(mi, p)| {
+                let mut normals: Vec<glam::Vec3> = p.chunks(3).flat_map(|t| [(t[1] - t[0]).cross(t[2] - t[0]).normalize(); 3]).collect();
+                if mi == 0 {
+                    normals[0] = (normals[0] + glam::Vec3::X * tilt).normalize();
+                }
+                FileMesh { positions: p.clone(), normals: Some(normals), ..Default::default() }
+            })
+            .collect();
+        Scene::read(&Scene::write_v2(&v1.header, &meshes).unwrap()).unwrap()
+    };
+    let store = MemoryStore::new();
+    let opts = Options { cache: Some(&store), ..Default::default() };
+    let first = pollster::block_on(bake(&with_normals(0.0), &gpu, &opts)).unwrap();
+    assert_eq!(first.stats.tiles_baked, first.stats.tiles);
+    let same = pollster::block_on(bake(&with_normals(0.0), &gpu, &opts)).unwrap();
+    assert_eq!(same.stats.tiles_baked, 0);
+    let edited = pollster::block_on(bake(&with_normals(0.3), &gpu, &opts)).unwrap();
+    assert!(edited.stats.tiles_baked >= 1 && edited.stats.tiles_baked < edited.stats.tiles, "{} of {}", edited.stats.tiles_baked, edited.stats.tiles);
+}

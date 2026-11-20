@@ -49,7 +49,7 @@ pub fn rasterize(scene: &Scene, layout: &Layout, tile: &Tile) -> Vec<Texel> {
         for &t in &c.tris {
             let t = t as usize;
             let (pa, pb, pc) = (pos[t * 3], pos[t * 3 + 1], pos[t * 3 + 2]);
-            let (ua, ub, uc) = (c.local(pa, layout.density, layout.padding), c.local(pb, layout.density, layout.padding), c.local(pc, layout.density, layout.padding));
+            let [ua, ub, uc] = layout.triangle_uvs(scene, ci, t);
             let det = (ub.y - uc.y) * (ua.x - uc.x) + (uc.x - ub.x) * (ua.y - uc.y);
             if det.abs() < 1e-12 {
                 continue;
@@ -63,7 +63,14 @@ pub fn rasterize(scene: &Scene, layout: &Layout, tile: &Tile) -> Vec<Texel> {
                 let (l1, l2, l3) = bary(q);
                 pa * l1 + pb * l2 + pc * l3
             };
-            let n = face_normal(pos, t);
+            let face = face_normal(pos, t);
+            // vertex normals (v2 scenes) are interpolated across the triangle; a texel whose interpolated normal
+            // turns away from its face (bad data) keeps the face's
+            let corners = scene.normals[c.mesh as usize].as_ref().map(|n| (n[t * 3], n[t * 3 + 1], n[t * 3 + 2]));
+            let normal = |l1: f32, l2: f32, l3: f32| match corners {
+                Some((na, nb, nc)) => (na * l1 + nb * l2 + nc * l3).try_normalize().filter(|n| n.dot(face) >= 0.1).unwrap_or(face),
+                None => face,
+            };
             let o = at(Vec2::ZERO);
             let (dx, dy) = (at(Vec2::X) - o, at(Vec2::Y) - o);
             let lo = ua.min(ub).min(uc).floor().max(Vec2::ZERO);
@@ -85,6 +92,7 @@ pub fn rasterize(scene: &Scene, layout: &Layout, tile: &Tile) -> Vec<Texel> {
                         continue;
                     }
                     let p = at(q);
+                    let n = normal(l1, l2, l3);
                     out[i] = Texel {
                         pos: [p.x, p.y, p.z, 1.0],
                         normal: [n.x, n.y, n.z, f32::from_bits(ci)],

@@ -1,6 +1,6 @@
 # ADR-0004: Per-triangle lightmap UVs and object tiles
 
-- **Status:** accepted — decision 1 implemented in P3.3; 2–5 in P3.4–P3.8
+- **Status:** accepted — decisions 1–2 implemented in P3.3–P3.4; 3–5 in P3.6–P3.8
 - **Date:** 2026-11-20
 - **Phase:** 3
 - **Requirements:** REQ-UV-01 … 09, REQ-WASM-06

@@ -499,6 +499,12 @@ fn tile_seed(scene: &Scene, layout: &Layout, key: TileKey, charts: &[u32]) -> Ve
             for v in &scene.positions[c.mesh as usize][t as usize * 3..t as usize * 3 + 3] {
                 k.update(bytemuck::bytes_of(&v.to_array()));
             }
+            // vertex normals shape the tile's own texels (raster.rs); v1 scenes have none, so their hashes stay
+            if let Some(n) = &scene.normals[c.mesh as usize] {
+                for v in &n[t as usize * 3..t as usize * 3 + 3] {
+                    k.update(bytemuck::bytes_of(&v.to_array()));
+                }
+            }
         }
     }
     k.finalize().as_bytes().to_vec()

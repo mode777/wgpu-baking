@@ -89,6 +89,10 @@ flowchart TD
   K --> L["Assemble pages; **combined** or stationary-sun output (output.rs)"]
 ```
 
+Status (P3.4): rasterisation reads each triangle's tile-local UVs from `Layout::triangle_uvs` (planar
+charts project their corners; xatlas tiles will store theirs) and interpolates vertex normals when the
+scene has them (v2), falling back to the face normal; a tile's own normals are part of its hash.
+
 ### 3.2 Platform layer (ADR-0003)
 
 | Concern | `native` | `web` |
