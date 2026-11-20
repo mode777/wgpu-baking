@@ -60,6 +60,15 @@ pub struct Gpu {
     layout: wgpu::BindGroupLayout,
     pipelines: [wgpu::ComputePipeline; 3],
     pub adapter: String,
+    /// A software (CPU) adapter such as lavapipe/llvmpipe, SwiftShader or WARP: usable only on explicit opt-in.
+    pub software: bool,
+}
+
+/// Software adapters by device type or by the names they report (ADR-0009).
+pub fn is_software_adapter(name: &str, device_type: wgpu::DeviceType) -> bool {
+    let name = name.to_lowercase();
+    device_type == wgpu::DeviceType::Cpu
+        || ["llvmpipe", "lavapipe", "swiftshader", "microsoft basic render driver", "warp"].iter().any(|s| name.contains(s))
 }
 
 /// The scene as the passes read it.
@@ -123,7 +132,9 @@ impl Gpu {
             })
         };
         let pipelines = [pipeline("direct"), pipeline("gather"), pipeline("volume")];
-        Ok(Gpu { device, queue, layout, pipelines, adapter: format!("{} ({:?})", info.name, info.backend) })
+        let software = is_software_adapter(&info.name, info.device_type);
+        let adapter = format!("{} ({:?}{})", info.name, info.backend, if software { ", software" } else { "" });
+        Ok(Gpu { device, queue, layout, pipelines, adapter, software })
     }
 
     pub fn scene(&self, bvh: &Bvh, materials: &[[f32; 4]], charts: &[[[f32; 4]; 2]]) -> SceneBuffers {

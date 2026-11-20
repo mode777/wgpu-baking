@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  # Crates linted with `clippy -D warnings`. Upstream crates are not linted (ADR-0001); new crates are added here.
+  CLIPPY_CRATES: ""
+
+jobs:
+  rust-native:
+    name: rust-native (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - name: Toolchain (rust-toolchain.toml)
+        run: rustup show active-toolchain || rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+      - name: Build
+        run: cargo build --workspace --locked
+      - name: Unit tests (GPU tests skip without an adapter)
+        run: cargo test --workspace --locked
+      - name: Clippy (new crates)
+        if: env.CLIPPY_CRATES != ''
+        shell: bash
+        run: for c in $CLIPPY_CRATES; do cargo clippy -p "$c" --all-targets --locked -- -D warnings; done
+
+  rust-gpu:
+    name: rust-gpu (lavapipe)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      LIGHTBAKER_REQUIRE_GPU: "1"
+      LIGHTBAKER_ALLOW_SOFTWARE_ADAPTER: "1"
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install Mesa lavapipe (software Vulkan)
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q mesa-vulkan-drivers vulkan-tools
+          vulkaninfo --summary || true
+      - name: Toolchain (rust-toolchain.toml)
+        run: rustup show active-toolchain || rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+      - name: GPU integration tests on lavapipe
+        run: cargo test -p lightbaker --release --locked -- --nocapture

@@ -15,7 +15,10 @@ Requirements covered: REQ-ENG-04, REQ-ENG-05, plus the verification column of
   then run in the browser to prove parity.
 - **No GPU → skip locally, fail in CI.** Upstream skips GPU tests without an adapter; CI sets
   `LIGHTBAKER_REQUIRE_GPU=1` so a missing adapter fails the job. CI uses software adapters
-  (Mesa lavapipe) explicitly allowed with `LIGHTBAKER_ALLOW_SOFTWARE_ADAPTER=1` (ADR-0009).
+  (Mesa lavapipe) explicitly allowed with `LIGHTBAKER_ALLOW_SOFTWARE_ADAPTER=1` (ADR-0009). Without
+  that opt-in a software adapter counts as no adapter; with it, test output labels the adapter as
+  software. Detection: `lightbaker::gpu::is_software_adapter` (unit-tested in
+  `crates/lightbaker/tests/adapter_policy.rs`).
 - **Few, cheap end-to-end tests.** Behaviour is proven at the lowest possible layer (Rust, WASM,
   Vitest with mocked workers). Browser e2e tests are limited to the budget below.
 

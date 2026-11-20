@@ -37,7 +37,7 @@ pnpm install                                           # (P2) at the repository 
 ```powershell
 cargo build --release -p lightbaker-cli                                    # (P1)
 cargo run --release -p lightbaker-cli -- scene.lbscene --out baked/ --cache .lbcache/   # (P1, upstream usage)
-cargo test -p lightbaker                                                   # (P1) GPU tests skip without an adapter
+cargo test -p lightbaker                                                   # GPU tests skip without an adapter (see CI env vars below)
 ```
 
 ## WASM engine
@@ -93,3 +93,19 @@ Standard GitHub-hosted runners only; GPU work runs on software adapters (Mesa la
 
 Each job should stay under ~10 minutes. Performance numbers from software adapters are not
 meaningful; real-GPU measurements go into the phase reports.
+
+Workflow: [.github/workflows/ci.yml](../.github/workflows/ci.yml). Status (P1.3): `rust-native` and
+`rust-gpu` exist; `wasm` arrives with P2.3, `web` with P2.6. New crates are added to the
+`CLIPPY_CRATES` list there to be linted with `-D warnings`.
+
+GPU test environment variables (read by the test helper in `crates/lightbaker/tests/bake.rs`):
+
+| Variable | Effect |
+|---|---|
+| `LIGHTBAKER_REQUIRE_GPU=1` | no usable adapter **fails** the test instead of skipping it |
+| `LIGHTBAKER_ALLOW_SOFTWARE_ADAPTER=1` | a software adapter (CPU device type; llvmpipe/lavapipe, SwiftShader, WARP/"Microsoft Basic Render Driver") may be used; output is labelled `[SOFTWARE ADAPTER …]` |
+
+Reproducing CI locally without Docker/WSL (Windows): run the `rust-native` steps verbatim
+(`cargo build --workspace --locked`, `cargo test --workspace --locked`) and the `rust-gpu` step
+against the local hardware GPU with `$env:LIGHTBAKER_REQUIRE_GPU='1'; cargo test -p lightbaker --release`.
+The Linux/lavapipe jobs are verified on GitHub.

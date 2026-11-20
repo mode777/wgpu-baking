@@ -88,8 +88,23 @@ fn ground_texel(s: &Scene, l: &Layout, x: f32, z: f32) -> usize {
     dot(a[1]).floor() as usize * l.width as usize + dot(a[0]).floor() as usize
 }
 
+/// The GPU to test on, or `None` to skip. `LIGHTBAKER_REQUIRE_GPU=1` turns a skip into a failure (CI);
+/// a software adapter counts as none unless `LIGHTBAKER_ALLOW_SOFTWARE_ADAPTER=1` (ADR-0009).
 fn gpu() -> Option<Gpu> {
-    Gpu::new().map_err(|e| eprintln!("no GPU, skipped: {e}")).ok()
+    let flag = |name: &str| std::env::var(name).is_ok_and(|v| v == "1");
+    let unavailable = |why: String| {
+        assert!(!flag("LIGHTBAKER_REQUIRE_GPU"), "LIGHTBAKER_REQUIRE_GPU=1 but {why}");
+        eprintln!("no GPU, skipped: {why}");
+        None
+    };
+    match Gpu::new() {
+        Err(e) => unavailable(e.to_string()),
+        Ok(gpu) if gpu.software && !flag("LIGHTBAKER_ALLOW_SOFTWARE_ADAPTER") => unavailable(format!("only a software adapter, {}; set LIGHTBAKER_ALLOW_SOFTWARE_ADAPTER=1 to use it", gpu.adapter)),
+        Ok(gpu) => {
+            eprintln!("GPU adapter: {}{}", gpu.adapter, if gpu.software { " [SOFTWARE ADAPTER: results are not representative of hardware]" } else { "" });
+            Some(gpu)
+        }
+    }
 }
 
 #[test]
