@@ -1,0 +1,60 @@
+schema: spec-driven
+githubCopilot:
+  cloudAgent: false
+
+context: |
+  Browser GI lightmap baker: fork of jer-nc/lightbaker (Rust, wgpu, WGSL) compiled to
+  wasm32-unknown-unknown and run on WebGPU in a Web Worker; xatlas lightmap UVs; React + Three.js + Vite editor.
+  Read AGENTS.md before planning. ROADMAP.md defines phases; each roadmap task is one change and uses the
+  change name suggested there. Only plan work for the current phase. Phase 3+ is blocked until the Phase 2
+  exit criteria (existing baker baking in a browser on a real WebGPU adapter) are met.
+  Hard constraints: the bake runs only in Rust/wgpu (no JS lighting engine); no silent CPU/fallback-adapter
+  baking; no fake lighting; never light baked meshes twice in Three.js; preserve upstream architecture with
+  additive, feature-gated (native/web) changes; native and wasm builds must both pass.
+  Requirement IDs (REQ-...) come from docs/REQUIREMENTS.md; normative semantics live in docs/LIGHTING_MODEL.md
+  and docs/INTERFACES.md; decisions that change crate boundaries, formats, GPU layouts, the lighting model or
+  public interfaces need an ADR in docs/adr/.
+
+rules:
+  proposal:
+    - Reference the ROADMAP task id (e.g. P2.4) and the REQ- ids it satisfies
+    - State what is explicitly out of scope
+  design:
+    - Name every new GPU-to-CPU readback, blocking call or native-only dependency and justify it, or state there are none
+    - List the ADRs created or updated
+  tasks:
+    - Include tests that prove the behaviour at the lowest possible layer (Rust, WASM, Vitest); Playwright only within the e2e budget in docs/TESTING.md
+    - Include native and wasm32 build checks for touched crates
+    - Never use or commit polyfork.dev files in tests; tests must not need network access
+    - Include updating affected docs and ticking the ROADMAP task
+
+# Project context (optional)
+# Add only constraints that should guide OpenSpec artifacts and workflows.
+# Include constraints an agent cannot infer by reading the code.
+# Keep general project documentation and discoverable codebase facts out.
+# Example:
+#   context: |
+#     Designs and tasks must cover Windows, macOS, and Linux
+#     Write all artifacts in Spanish
+
+# Per-artifact rules (optional)
+# Add custom rules for specific artifacts.
+# Example:
+#   rules:
+#     proposal:
+#       - Keep proposals under 500 words
+#       - Always state what is out of scope
+#     tasks:
+#       - Break tasks into chunks of max 2 hours
+
+# Per-operation guidance (optional)
+# Add advisory guidance for how apply and archive work should be conducted.
+# This is separate from artifact rules above.
+# Example:
+#   operations:
+#     apply:
+#       guidance:
+#         - Keep test summaries concise
+#     archive:
+#       guidance:
+#         - Summarize the archive outcome before finishing
