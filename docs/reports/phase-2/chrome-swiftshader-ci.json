@@ -1,0 +1,74 @@
+{
+  "channel": "chrome",
+  "profile": "ci",
+  "browser": "157.0.8103.80",
+  "gpuAdapter": {
+    "vendor": "google",
+    "architecture": "swiftshader",
+    "device": "",
+    "description": "",
+    "isFallbackAdapter": true
+  },
+  "firstBake": {
+    "state": "done",
+    "wallMs": 1502,
+    "status": "WebGPU ready — on a software adapter",
+    "adapter": "google swiftshader (BrowserWebGpu, Cpu) SOFTWARE ADAPTERstorage binding 1024 MiB · buffer 1024 MiB · workgroups/dim 65535",
+    "outcome": "baked in 1.31 s SOFTWARE ADAPTER",
+    "timings": {
+      "layout": "7 ms",
+      "direct": "891 ms",
+      "bounce 1": "200 ms",
+      "bounce 2": "151 ms",
+      "volume": "37 ms",
+      "total (worker)": "1.31 s",
+      "engine bake.seconds": "1.286 s",
+      "triangles / charts": "538 / 29",
+      "tiles baked": "16 of 16",
+      "atlas": "1024×180 (indirect 512×90)",
+      "GPU batches / readbacks": "7 / 7",
+      "read back / uploaded": "1.85 MiB / 15.29 MiB",
+      ".lbake": "0.37 MiB",
+      "wasm memory": "33.44 MiB"
+    },
+    "checks": {
+      "text": "19 of 19 checks passed",
+      "passed": "true",
+      "count": "19"
+    },
+    "warnings": "—"
+  },
+  "cancel": "cancelled",
+  "rebake": {
+    "state": "done",
+    "checks": "19 of 19 checks passed"
+  },
+  "bench": {
+    "runs": 3,
+    "medianMs": {
+      "layout": 1,
+      "direct": 237,
+      "bounce 1": 187,
+      "bounce 2": 137,
+      "volume": 33,
+      "total (worker)": 610,
+      "engine bake.seconds": 601
+    },
+    "last": {
+      "layout": "1 ms",
+      "direct": "236 ms",
+      "bounce 1": "185 ms",
+      "bounce 2": "137 ms",
+      "volume": "31 ms",
+      "total (worker)": "602 ms",
+      "engine bake.seconds": "0.593 s",
+      "triangles / charts": "538 / 29",
+      "tiles baked": "16 of 16",
+      "atlas": "1024×180 (indirect 512×90)",
+      "GPU batches / readbacks": "7 / 7",
+      "read back / uploaded": "1.85 MiB / 15.29 MiB",
+      ".lbake": "0.37 MiB",
+      "wasm memory": "36.00 MiB"
+    }
+  }
+}

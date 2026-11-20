@@ -1,0 +1,116 @@
+[
+  {
+    "check": "box shadow east of the box",
+    "native": 0.0,
+    "browser": 0,
+    "diff": 0.0
+  },
+  {
+    "check": "sunlit ground west of the box",
+    "native": 1.0,
+    "browser": 1,
+    "diff": 0.0
+  },
+  {
+    "check": "occlusion at the box's foot",
+    "native": 0.883,
+    "browser": 0.883,
+    "diff": 0.0
+  },
+  {
+    "check": "red wall bleeds onto the ground",
+    "native": 2.352,
+    "browser": 2.352,
+    "diff": 0.0
+  },
+  {
+    "check": "sky lights the open ground",
+    "native": 1.068,
+    "browser": 1.068,
+    "diff": 0.0
+  },
+  {
+    "check": "volume sees the sun in the open",
+    "native": 1.0,
+    "browser": 1,
+    "diff": 0.0
+  },
+  {
+    "check": "volume in the wall's shadow",
+    "native": 0.0,
+    "browser": 0,
+    "diff": 0.0
+  },
+  {
+    "check": "light along the strip (0)",
+    "native": 3.311,
+    "browser": 3.311,
+    "diff": 0.0
+  },
+  {
+    "check": "light along the strip (1)",
+    "native": 3.311,
+    "browser": 3.311,
+    "diff": 0.0
+  },
+  {
+    "check": "light along the strip (2)",
+    "native": 3.258,
+    "browser": 3.258,
+    "diff": 0.0
+  },
+  {
+    "check": "light along the strip (3)",
+    "native": 3.258,
+    "browser": 3.258,
+    "diff": 0.0
+  },
+  {
+    "check": "light along the strip (4)",
+    "native": 3.258,
+    "browser": 3.258,
+    "diff": 0.0
+  },
+  {
+    "check": "light along the strip (5)",
+    "native": 3.194,
+    "browser": 3.194,
+    "diff": 0.0
+  },
+  {
+    "check": "light along the strip (6)",
+    "native": 3.194,
+    "browser": 3.194,
+    "diff": 0.0
+  },
+  {
+    "check": "light along the strip (7)",
+    "native": 3.122,
+    "browser": 3.122,
+    "diff": 0.0
+  },
+  {
+    "check": "light along the strip (8)",
+    "native": 3.122,
+    "browser": 3.122,
+    "diff": 0.0
+  },
+  {
+    "check": "light along the strip (9)",
+    "native": 3.122,
+    "browser": 3.122,
+    "diff": 0.0
+  },
+  {
+    "check": "light along the strip (10)",
+    "native": 3.053,
+    "browser": 3.053,
+    "diff": 0.0
+  },
+  {
+    "check": "light along the strip (11)",
+    "native": 3.053,
+    "browser": 3.053,
+    "diff": 0.0
+  }
+]

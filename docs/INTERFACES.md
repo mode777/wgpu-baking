@@ -269,7 +269,8 @@ camelCase:
   texel: sun field, AO */, indirect: { width, height, data: Float32Array /* RGB irradiance */ },
   validity: Uint8Array, volume?: { origin, step, size, probes: Float32Array /* 16 floats a probe */ },
   stats: { triangles, charts, bake: { tiles, tilesBaked, texelsBaked, chunks, chunksBaked, seconds },
-  adapter, software, transfers: { batches, readbacks, readbackBytes, uploadBytes }, cacheBytes },
+  adapter, software, transfers: { batches, readbacks, readbackBytes, uploadBytes }, cacheBytes,
+  wasmMemoryBytes },
   adapter, warnings: string[] }` (Phase 2 PoC shape; §6 `BakeResult` with pages and per-mesh UVs comes
   with Phase 3). On the web the `.lbake`'s KTX2 textures are not zstd-supercompressed (ADR-0003).
 - `config_json` is a partial `BakeConfig` (§4). Applied now: `lightmap.{texelsPerMeter, padding,

@@ -16,6 +16,8 @@ export const PROFILES: Record<string, BakeConfigOverrides> = {
   full: {},
   // CI on lavapipe: fewer rays, same layout, so every check of expect.json still holds (P2.6)
   ci: { sampling: { sunSamples: 4, aoRays: 32, giRays: 64, volumeRays: 32 } },
+  // the P1.5 baseline's dense variant (4x the texels, 512 rays, 3 bounces): native vs browser on equal work
+  dense: { lightmap: { texelsPerMeter: 16, atlasMaxSize: 2048 }, sampling: { giRays: 512 }, gi: { bounces: 3 } },
 };
 
 const params = new URLSearchParams(location.search);
@@ -155,6 +157,7 @@ function showResult(out: BakeOutput & { elapsedMs: number }, phaseEnds: [string,
     ['GPU batches / readbacks', `${t.batches} / ${t.readbacks}`],
     ['read back / uploaded', `${mib(t.readbackBytes)} / ${mib(t.uploadBytes)}`],
     ['.lbake', mib(out.lbake.byteLength)],
+    ['wasm memory', s.wasmMemoryBytes ? mib(s.wasmMemoryBytes) : '—'],
   );
   $('timings').innerHTML = rows.map(([k, v]) => `<tr><td>${k}</td><td class="num">${v}</td></tr>`).join('');
   const c = out.checks;

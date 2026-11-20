@@ -428,6 +428,7 @@ fn outputs(inner: &Inner, scene: &Scene, b: &Bake, lbake: &[u8], warnings: &[Str
             "software": gpu.software,
             "transfers": gpu.transfers(),
             "cacheBytes": inner.store.bytes(),
+            "wasmMemoryBytes": wasm_memory_bytes(),
         })),
     );
     set("adapter", &to_js(&AdapterCaps::new(gpu.report.clone())));
@@ -437,4 +438,13 @@ fn outputs(inner: &Inner, scene: &Scene, b: &Bake, lbake: &[u8], warnings: &[Str
 
 fn bytemuck_flat<const N: usize>(v: &[[f32; N]]) -> &[f32] {
     v.as_flattened()
+}
+
+/// The wasm linear memory's size (it only grows): the bake's CPU-side peak, roughly.
+fn wasm_memory_bytes() -> f64 {
+    wasm_bindgen::memory()
+        .dyn_into::<js_sys::WebAssembly::Memory>()
+        .ok()
+        .and_then(|m| m.buffer().dyn_into::<js_sys::ArrayBuffer>().ok())
+        .map_or(0.0, |b| b.byte_length() as f64)
 }

@@ -1,0 +1,77 @@
+{
+  "channel": "chrome",
+  "profile": "dense",
+  "browser": "157.0.8103.80",
+  "gpuAdapter": {
+    "vendor": "intel",
+    "architecture": "xe-3lpg",
+    "device": "",
+    "description": "",
+    "isFallbackAdapter": false
+  },
+  "firstBake": {
+    "state": "done",
+    "wallMs": 4100,
+    "status": "WebGPU ready",
+    "adapter": "intel xe-3lpg (BrowserWebGpu, Other)storage binding 2047 MiB · buffer 2048 MiB · workgroups/dim 65535",
+    "outcome": "baked in 3.80 s",
+    "timings": {
+      "layout": "8 ms",
+      "direct": "882 ms",
+      "bounce 1": "1.89 s",
+      "bounce 2": "420 ms",
+      "bounce 3": "358 ms",
+      "volume": "92 ms",
+      "total (worker)": "3.80 s",
+      "engine bake.seconds": "3.720 s",
+      "triangles / charts": "538 / 29",
+      "tiles baked": "16 of 16",
+      "atlas": "2048×924 (indirect 1024×462)",
+      "GPU batches / readbacks": "72 / 72",
+      "read back / uploaded": "30.01 MiB / 234.99 MiB",
+      ".lbake": "3.64 MiB",
+      "wasm memory": "442.06 MiB"
+    },
+    "checks": {
+      "text": "19 of 19 checks passed",
+      "passed": "true",
+      "count": "19"
+    },
+    "warnings": "—"
+  },
+  "cancel": "cancelled",
+  "rebake": {
+    "state": "done",
+    "checks": "19 of 19 checks passed"
+  },
+  "bench": {
+    "runs": 3,
+    "medianMs": {
+      "layout": 1,
+      "direct": 474,
+      "bounce 1": 1720,
+      "bounce 2": 373,
+      "bounce 3": 367,
+      "volume": 94,
+      "total (worker)": 3150,
+      "engine bake.seconds": 3100
+    },
+    "last": {
+      "layout": "1 ms",
+      "direct": "522 ms",
+      "bounce 1": "1.72 s",
+      "bounce 2": "404 ms",
+      "bounce 3": "367 ms",
+      "volume": "89 ms",
+      "total (worker)": "3.18 s",
+      "engine bake.seconds": "3.126 s",
+      "triangles / charts": "538 / 29",
+      "tiles baked": "16 of 16",
+      "atlas": "2048×924 (indirect 1024×462)",
+      "GPU batches / readbacks": "72 / 72",
+      "read back / uploaded": "30.01 MiB / 234.99 MiB",
+      ".lbake": "3.64 MiB",
+      "wasm memory": "469.13 MiB"
+    }
+  }
+}

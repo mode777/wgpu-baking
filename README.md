@@ -6,7 +6,7 @@ soft shadows, emissive surfaces, point/spot/area lights — with automatic light
 
 Visual target: stylized, fully baked lighting reminiscent of *The Witness* (2016).
 
-> **Status: Phase 2 (WASM/WebGPU proof of concept) in progress — native baseline done ([report](docs/reports/phase-1-baseline.md)).** See [ROADMAP.md](ROADMAP.md).
+> **Status: Phase 3 (xatlas lightmap UVs) in progress — the baker already bakes in the browser on WebGPU ([Phase 2 report](docs/reports/phase-2-webgpu.md)); try it with `pnpm -C app build:wasm && pnpm -C app dev`.** See [ROADMAP.md](ROADMAP.md).
 
 ## How it will work
 

@@ -58,6 +58,8 @@ export interface BakeStats {
   software: boolean;
   transfers: { batches: number; readbacks: number; readbackBytes: number; uploadBytes: number };
   cacheBytes: number;
+  /** the wasm heap's size after the bake */
+  wasmMemoryBytes?: number;
 }
 
 /** What `WebBaker.bake` resolves to (docs/INTERFACES.md §8), plus the checks when `expect` was given. */

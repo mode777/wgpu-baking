@@ -6,6 +6,7 @@
 //                                                   [--allow-fallback] [--out file.json] [--screenshot file.png]
 //                                                   [--browser-arg <chrome flag>]… (e.g. --use-webgpu-adapter=swiftshader)
 //                                                   [--lose-device] (device.destroy() → recreate → bake)
+//                                                   [--bench N] (N warm full bakes: median per phase)
 
 import { spawn } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
@@ -54,6 +55,7 @@ try {
     outcome: await page.textContent('#outcome'),
     timings: await page.$$eval('#timings tr', (rows) => Object.fromEntries(rows.map((r) => [r.cells[0].textContent, r.cells[1].textContent]))),
     checks: await page.$eval('#checks-summary', (e) => ({ text: e.textContent, passed: e.dataset.passed, count: e.dataset.count })).catch(() => null),
+    checkValues: await page.$$eval('#checks tr', (rows) => rows.map((r) => ({ name: r.cells[1].textContent, a: Number(r.cells[2].textContent), b: Number(r.cells[3].textContent), passed: r.cells[0].textContent === '✓' }))),
     warnings: await page.textContent('#warnings'),
   };
   if (result.firstBake.state === 'done') {
@@ -69,6 +71,21 @@ try {
     result.rebake = { state: await page.evaluate(() => document.body.dataset.state), checks: await page.textContent('#checks-summary') };
   }
   await page.screenshot({ path: arg('--screenshot', 'hw-check.png') });
+  const bench = Number(arg('--bench', '0'));
+  if (bench > 0 && result.firstBake.state === 'done') {
+    // warm, full bakes (no tile reuse): the median per phase, comparable with the native `baseline` example
+    await page.uncheck('#reuse');
+    const runs = [];
+    for (let i = 0; i < bench; i++) {
+      await page.click('#bake');
+      await page.waitForFunction(() => document.body.dataset.state !== 'baking', null, { timeout: 300_000 });
+      runs.push(await page.$$eval('#timings tr', (rows) => Object.fromEntries(rows.map((r) => [r.cells[0].textContent, r.cells[1].textContent]))));
+    }
+    const ms = (v) => (v?.endsWith(' ms') ? parseFloat(v) : v?.endsWith(' s') ? parseFloat(v) * 1000 : NaN);
+    const median = (xs) => xs.sort((a, b) => a - b)[Math.floor(xs.length / 2)];
+    const keys = Object.keys(runs[0]).filter((k) => !Number.isNaN(ms(runs[0][k])));
+    result.bench = { runs: bench, medianMs: Object.fromEntries(keys.map((k) => [k, median(runs.map((r) => ms(r[k])))])), last: runs[runs.length - 1] };
+  }
   if (has('--lose-device')) {
     // a real device.destroy() in the worker (debug button), then recovery without reloading the page
     await page.goto(`http://localhost:${port}/?${new URLSearchParams({ profile, debug: '1', ...(has('--allow-fallback') ? { allowFallbackAdapter: '1' } : {}) })}`);

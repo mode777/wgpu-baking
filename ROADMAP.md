@@ -14,7 +14,7 @@ name in `code`), small enough to review. Requirement IDs refer to
 - Tick a task (`[x]`) in the same change that archives its OpenSpec change.
 - Performance targets are set at the end of Phase 2 from measurements, not guessed now.
 
-**Current phase: 2 — WASM / WebGPU proof of concept** (Phase 1 complete: [report](docs/reports/phase-1-baseline.md)).
+**Current phase: 3 — xatlas lightmap UVs** (Phase 2 complete, hard gate passed: [report](docs/reports/phase-2-webgpu.md); Phase 1: [report](docs/reports/phase-1-baseline.md)).
 
 ---
 
@@ -61,7 +61,7 @@ Requirements: REQ-WASM-10, REQ-ENG-03, REQ-ENG-07, REQ-LGT-01, REQ-LGT-05, REQ-G
 
 ---
 
-## Phase 2 — WASM / WebGPU proof of concept
+## Phase 2 — WASM / WebGPU proof of concept ✅
 
 **Goal:** the *existing* baker (planar layout, sun, sky, bounces, volume) bakes a small scene in
 the browser on WebGPU. **Deliverable:** browser PoC page baking `upstream-basic`.
@@ -84,7 +84,7 @@ the browser on WebGPU. **Deliverable:** browser PoC page baking `upstream-basic`
 - [x] **P2.7** `cancel-and-device-loss` — Cancel within one batch (Rust test); device-lost mapping
       and worker recreation (Vitest with mocked `GPUDevice.lost`); real `device.destroy()` checked
       manually on a hardware GPU.
-- [ ] **P2.8** `phase-2-report` — Native vs browser timings, readbacks, limits hit, WGSL compile
+- [x] **P2.8** `phase-2-report` — Native vs browser timings, readbacks, limits hit, WGSL compile
       notes, memory; **set performance targets** for Phases 3–6. Report: `docs/reports/phase-2-webgpu.md`.
 
 **Exit criteria (hard gate)**
@@ -243,15 +243,15 @@ REQ-WASM-06 … 08 (full).
 | # | Question | Needed by | Owner |
 |---|---|---|---|
 | Q3 | Three.js `WebGPURenderer` vs `WebGLRenderer` for viewing (lightmap semantics) | P5.3 | calibration test |
-| Q4 | Concrete performance targets (bake time per preset, max scene size) | P2.8 | measurements |
 
-### Resolved (2026-11-20)
+### Resolved (2026-11-20; Q4 at the end of Phase 2)
 
 | # | Question | Decision |
 |---|---|---|
 | Q1 | xatlas in the browser | `xatlas-wasm` in the baker worker; native FFI over the same xatlas commit (ADR-0006). |
 | Q2 | polyfork files in the repo; browser identification | Never commit polyfork meshes (script-generated; committing could count as redistribution); link the CDN only. Browser `Referer`/`Origin` is acceptable instead of a custom `User-Agent` (ADR-0008). |
 | Q5 | Copyright line | Keep upstream's MIT text and Orbitoon line; add `Copyright (c) 2026 The wgpu-baking contributors` (P1.2). |
+| Q4 | Concrete performance targets (bake time per preset, max scene size) | Set from Phase 2 measurements on the reference iGPU (Chrome, Intel Xe-3LPG): see [phase-2-webgpu.md § Performance targets](docs/reports/phase-2-webgpu.md#performance-targets-for-phases-36) — e.g. `dense` ≤ 1.5 s and browser ≤ 1.5× native by Phase 6, Balanced showcase ≤ 30 s, ≤ 250 k triangles / 4 pages of 2048². |
 | Q6 | CI with GPU/WebGPU | GitHub Actions standard runners with software adapters (lavapipe), small e2e budget; real-GPU checks manual or optional paid runner (ADR-0009). |
 
 ## Risks
