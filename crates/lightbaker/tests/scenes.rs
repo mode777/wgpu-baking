@@ -69,6 +69,29 @@ fn progress_and_cancel() {
 }
 
 #[test]
+fn cancelled_bake_leaves_the_store_unchanged() {
+    use lightbaker::progress::{Cancelled, Phase, Progress};
+    use std::cell::Cell;
+    let Some(gpu) = gpu() else { return };
+    let scene = Scene::read(&std::fs::read(scenes_dir().join("upstream-basic/upstream-basic.lbscene")).unwrap()).unwrap();
+    let store = MemoryStore::new();
+    let stop = Cell::new(false);
+    let progress = |p: Progress| {
+        if p.phase == Phase::Bounce {
+            stop.set(true);
+        }
+    };
+    let cancel = || stop.get();
+    let err = pollster::block_on(bake(&scene, &gpu, &Options { cache: Some(&store), progress: Some(&progress), cancel: Some(&cancel), ..Default::default() })).err().expect("the bake was cancelled");
+    assert!(err.downcast_ref::<Cancelled>().is_some(), "{err:#}");
+    assert!(store.is_empty(), "a cancelled bake wrote {} entries", store.len());
+    let next = pollster::block_on(bake(&scene, &gpu, &Options { cache: Some(&store), ..Default::default() })).unwrap();
+    assert_eq!(next.stats.tiles_baked, next.stats.tiles);
+    let fresh = pollster::block_on(bake(&scene, &gpu, &Options::default())).unwrap();
+    assert!(output::write(&scene, &next).unwrap() == output::write(&scene, &fresh).unwrap());
+}
+
+#[test]
 fn device_lost_mid_bake() {
     use lightbaker::gpu::GpuError;
     use lightbaker::progress::{Phase, Progress};

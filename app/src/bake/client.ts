@@ -56,6 +56,11 @@ export class BakerClient {
     this.worker.postMessage({ type: 'cancel', jobId });
   }
 
+  /** Debug sessions only: destroy the worker's GPU device (manual device-loss checks). */
+  debugLoseDevice(): void {
+    this.worker.postMessage({ type: 'debug-lose-device' });
+  }
+
   dispose(): void {
     this.worker.postMessage({ type: 'dispose' });
     this.worker.terminate();
@@ -90,7 +95,7 @@ export class BakerClient {
         } else if (this.initWaiter) {
           this.finishInit({ error: e.error });
         }
-        if (!job || e.error.kind === 'device-lost') this.onError?.(e.error);
+        if (!job) this.onError?.(e.error);
         return;
       }
     }

@@ -5,6 +5,7 @@
 //   pnpm -C app build && node scripts/hw-check.mjs [--channel chrome|msedge] [--headed] [--profile full|ci]
 //                                                   [--allow-fallback] [--out file.json] [--screenshot file.png]
 //                                                   [--browser-arg <chrome flag>]… (e.g. --use-webgpu-adapter=swiftshader)
+//                                                   [--lose-device] (device.destroy() → recreate → bake)
 
 import { spawn } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
@@ -68,6 +69,20 @@ try {
     result.rebake = { state: await page.evaluate(() => document.body.dataset.state), checks: await page.textContent('#checks-summary') };
   }
   await page.screenshot({ path: arg('--screenshot', 'hw-check.png') });
+  if (has('--lose-device')) {
+    // a real device.destroy() in the worker (debug button), then recovery without reloading the page
+    await page.goto(`http://localhost:${port}/?${new URLSearchParams({ profile, debug: '1', ...(has('--allow-fallback') ? { allowFallbackAdapter: '1' } : {}) })}`);
+    await page.waitForFunction(() => document.body.dataset.state === 'ready', null, { timeout: 60_000 });
+    const t = Date.now();
+    await page.click('#lose');
+    await page.waitForFunction(() => document.body.dataset.state === 'device-lost', null, { timeout: 30_000 });
+    const lost = { afterMs: Date.now() - t, status: await page.textContent('#status'), bakeDisabled: await page.isDisabled('#bake') };
+    await page.click('#recreate');
+    await page.waitForFunction(() => document.body.dataset.state === 'ready', null, { timeout: 60_000 });
+    await page.click('#bake');
+    await page.waitForFunction(() => !['ready', 'baking'].includes(document.body.dataset.state), null, { timeout: 300_000 });
+    result.deviceLoss = { lost, recreated: true, bakeAfterRecreate: await page.evaluate(() => document.body.dataset.state), checks: await page.textContent('#checks-summary') };
+  }
 } finally {
   await browser.close();
   // on Windows the server runs under a shell: end its whole process tree
@@ -78,4 +93,4 @@ const json = JSON.stringify(result, null, 2);
 console.log(json);
 const out = arg('--out');
 if (out) writeFileSync(out, json + '\n');
-process.exit(result.firstBake?.state === 'done' && result.rebake?.state === 'done' ? 0 : 1);
+process.exit(result.firstBake?.state === 'done' && result.rebake?.state === 'done' && (!result.deviceLoss || result.deviceLoss.bakeAfterRecreate === 'done') ? 0 : 1);

@@ -132,9 +132,16 @@ on real GPUs.
 - Rust ↔ WGSL struct layout tests (size and field offsets).
 - Determinism: bake twice → identical bytes; bake with warm cache → identical bytes.
 - Cancellation: cancel mid-bake → `cancelled` event within one batch; next bake succeeds
-  (Rust test with a cancel hook; one browser check in `bake-poc.spec.ts`).
+  (Rust test with a cancel hook; one browser check in `bake-poc.spec.ts`). Implemented:
+  `tests/scenes.rs::progress_and_cancel` (exactly one GPU batch dispatched before the stop; the next bake
+  is byte-identical) and `cancelled_bake_leaves_the_store_unchanged` (cancel during bounce 1 → the
+  `MemoryStore` stays empty).
 - Device loss: native test drops the device mid-bake; worker/bridge error mapping tested in Vitest
   with a mocked `GPUDevice.lost`; real `device.destroy()` checked manually in the Phase 2 report.
+  Implemented: `tests/scenes.rs::device_lost_mid_bake` (`Gpu::destroy()` → `GpuError::DeviceLost`, the
+  lost receiver resolves), `app/test/service.test.ts` (loss outside/during a bake, reported once,
+  `BakerService.recreate()` → a new worker bakes), and `app/scripts/hw-check.mjs --lose-device` (real
+  `device.destroy()` via the page's `?debug=1` button → "device lost" → Recreate → bake passes).
 - Limits: scene needing more than `maxStorageBufferBindingSize` → split or `limit-exceeded`,
   never a crash.
 

@@ -79,11 +79,17 @@ export interface BakeOutput {
 /** A partial `BakeConfig` (INTERFACES.md §4); the bridge applies what it supports and warns about the rest. */
 export type BakeConfigOverrides = Record<string, unknown>;
 
+/** Device loss is reported once per baker as an `error` without `jobId`; a bake running at that moment also
+ * ends with its own `device-lost` error. */
+/** Device loss is reported once per baker as an `error` without `jobId`; a bake running at that moment also
+ * ends with its own `device-lost` error. */
 export type BakeRequest =
   | { type: 'init'; allowFallbackAdapter: boolean }
   | { type: 'bake'; jobId: Id; scene: ArrayBuffer; config?: BakeConfigOverrides; expect?: string }
   | { type: 'cancel'; jobId: Id }
-  | { type: 'dispose' };
+  | { type: 'dispose' }
+  /** debug sessions only (`?debug=1`): destroy the worker's GPU device, as a driver reset would */
+  | { type: 'debug-lose-device' };
 
 export type BakeEvent =
   | { type: 'capabilities'; caps: BakerCapabilities }

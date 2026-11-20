@@ -230,7 +230,11 @@ without `jobId` (`no-webgpu`, `fallback-adapter-refused`, …); `bake` carries `
 `BakeConfig`) and optional `expect` (an `expect.json` string) — `done.result` is the bridge output
 (§8) plus `checks` when `expect` was given, and `done.elapsedMs`; `progress` carries `bounce` and
 `elapsedMs` (no `etaMs`, `preview` or `unwrap` yet). Device loss arrives as an `error` with kind
-`device-lost`. The protocol logic is `app/src/bake/bakerCore.ts` (tested with a fake bridge).
+`device-lost` **without `jobId`, once per baker**; a bake running at that moment also ends with its own
+`device-lost` error. The page's `BakerService` (`app/src/bake/service.ts`) then offers to recreate the
+baker (a new worker and device; the tile store is lost with the old worker). `{ type:
+'debug-lose-device' }` (debug sessions, `?debug=1`) destroys the worker's device for manual checks.
+The protocol logic is `app/src/bake/bakerCore.ts` (tested with a fake bridge).
 The browser's `GPUAdapterInfo` (vendor, architecture) completes the adapter report and also decides
 whether it is a software adapter (Chrome need not set `isFallbackAdapter` for lavapipe).
 

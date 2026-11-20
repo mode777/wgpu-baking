@@ -26,6 +26,7 @@ const bridge: Bridge = {
       evaluate: (expect) => b.evaluate(expect),
       adapter: () => b.adapter(),
       setDeviceLostCallback: (cb) => b.setDeviceLostCallback(cb),
+      loseDevice: () => b.loseDeviceForTesting(),
       free: () => b.free(),
     };
     return baker;

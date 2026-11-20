@@ -25,3 +25,10 @@ error as soon as it returns true, without writing to the tile store afterwards.
 #### Scenario: Next bake after a cancel
 - **WHEN** a bake is cancelled and the same GPU bakes the scene again without cancelling
 - **THEN** the second bake succeeds with the same bytes as an uncancelled bake
+
+### Requirement: Cancelled bakes leave the tile store unchanged
+A bake cancelled at any GPU batch SHALL write no tile or probe chunk to its tile store.
+
+#### Scenario: Cancel during a bounce
+- **WHEN** a bake with an empty in-memory store is cancelled during its first bounce
+- **THEN** the store is still empty and a following bake with the same store bakes every tile

@@ -81,7 +81,7 @@ the browser on WebGPU. **Deliverable:** browser PoC page baking `upstream-basic`
       two e2e specs of the budget (TESTING.md): `bake-poc.spec.ts` (CI-sized `upstream-basic`,
       metrics vs `expect.json`, cancel + rebake) and `no-webgpu.spec.ts`. Software adapter allowed
       and labelled.
-- [ ] **P2.7** `cancel-and-device-loss` — Cancel within one batch (Rust test); device-lost mapping
+- [x] **P2.7** `cancel-and-device-loss` — Cancel within one batch (Rust test); device-lost mapping
       and worker recreation (Vitest with mocked `GPUDevice.lost`); real `device.destroy()` checked
       manually on a hardware GPU.
 - [ ] **P2.8** `phase-2-report` — Native vs browser timings, readbacks, limits hit, WGSL compile

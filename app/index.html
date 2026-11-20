@@ -4,6 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>wgpu-baking — browser bake PoC</title>
+    <link rel="icon" href="data:," />
     <style>
       :root { font: 14px/1.4 system-ui, sans-serif; color-scheme: dark; }
       body { margin: 0; display: grid; grid-template-columns: 380px 1fr; height: 100vh; background: #15171a; color: #ddd; }
@@ -36,6 +37,10 @@
       <button id="bake" data-testid="bake" disabled>Bake</button>
       <button id="cancel" data-testid="cancel" disabled>Cancel</button>
       <label><input type="checkbox" id="reuse" data-testid="reuse" checked /> reuse baked tiles</label>
+      <div>
+        <button id="recreate" data-testid="recreate" hidden>Recreate baker</button>
+        <button id="lose" data-testid="lose-device" hidden title="debug: device.destroy() in the worker">Lose device (debug)</button>
+      </div>
       <div><progress id="bar" max="1" value="0"></progress></div>
       <div id="progress" data-testid="progress"></div>
       <div id="outcome" data-testid="outcome"></div>

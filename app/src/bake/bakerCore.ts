@@ -19,6 +19,8 @@ export interface BridgeBaker {
   evaluate(expectJson: string): CheckReport;
   adapter(): AdapterInfo;
   setDeviceLostCallback(cb: (reason: string) => void): void;
+  /** `device.destroy()` (the bridge's `loseDeviceForTesting`) */
+  loseDevice?(): void;
   free?(): void;
 }
 
@@ -50,8 +52,9 @@ export function createBakerCore(bridge: Bridge, post: Post, now: () => number = 
     try {
       const b = await bridge.create(allowFallbackAdapter);
       b.setDeviceLostCallback((reason) => {
+        if (baker !== b) return;
         baker = null;
-        post({ type: 'error', jobId: running ?? undefined, error: { kind: 'device-lost', message: `the GPU device was lost (${reason}); recreate the baker` } });
+        post({ type: 'error', error: { kind: 'device-lost', message: `the GPU device was lost (${reason}); recreate the baker` } });
       });
       baker = b;
       post({ type: 'ready', adapter: b.adapter() });
@@ -98,6 +101,9 @@ export function createBakerCore(bridge: Bridge, post: Post, now: () => number = 
         case 'dispose':
           baker?.free?.();
           baker = null;
+          return;
+        case 'debug-lose-device':
+          baker?.loseDevice?.();
           return;
       }
     },

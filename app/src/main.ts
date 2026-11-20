@@ -1,12 +1,13 @@
 /**
  * The Phase 2 proof of concept: bake `test-scenes/upstream-basic` in a worker on WebGPU and show what
  * happened. URL parameters: `allowFallbackAdapter=1` (bake on a software adapter, labelled), `profile=ci`
- * (a smaller bake for software adapters), `autobake=1`.
+ * (a smaller bake for software adapters), `autobake=1`, `debug=1` (a button that destroys the GPU device).
  */
 
 import sceneUrl from '../../test-scenes/upstream-basic/upstream-basic.lbscene?url';
 import expectJson from '../../test-scenes/upstream-basic/expect.json?raw';
-import { BakerClient, type BakeFailure, type ProgressEvent } from './bake/client';
+import type { BakeFailure, ProgressEvent } from './bake/client';
+import { BakerService } from './bake/service';
 import type { AdapterInfo, BakeConfigOverrides, BakeOutput } from './bake/protocol';
 import { LightmapView, type ViewMode } from './view/lightmapView';
 
@@ -36,7 +37,8 @@ const view = (() => {
 })();
 document.querySelectorAll<HTMLInputElement>('input[name=mode]').forEach((r) => r.addEventListener('change', () => view?.setMode(r.value as ViewMode)));
 
-const client = new BakerClient(new Worker(new URL('./bake/baker.worker.ts', import.meta.url), { type: 'module' }));
+const debug = params.get('debug') === '1';
+const service = new BakerService(() => new Worker(new URL('./bake/baker.worker.ts', import.meta.url), { type: 'module' }), allowFallbackAdapter);
 let sceneBytes: Uint8Array | null = null;
 let job: string | null = null;
 
@@ -52,36 +54,50 @@ function setStatus(html: string, cls: 'good' | 'bad' | 'warn' | '' = '') {
   s.className = cls;
 }
 
-client.onError = (e) => {
-  if (e.kind === 'device-lost') {
-    setStatus(`GPU device lost: ${e.message}`, 'bad');
-    ($('bake') as HTMLButtonElement).disabled = true;
+/** The page follows the baker's state: what it says, which buttons work. */
+function render() {
+  const s = service;
+  ($('recreate') as HTMLButtonElement).hidden = s.state !== 'lost';
+  ($('lose') as HTMLButtonElement).hidden = !debug || s.state !== 'ready';
+  ($('bake') as HTMLButtonElement).disabled = s.state !== 'ready' || job !== null || !sceneBytes;
+  const adapter = s.adapter ?? s.caps?.adapter;
+  $('adapter').innerHTML = adapter ? adapterLine(adapter) : '';
+  switch (s.state) {
+    case 'starting':
+      setStatus(s.generation > 1 ? 'recreating the baker…' : 'checking…');
+      break;
+    case 'unavailable':
+      setStatus(`WebGPU baking is unavailable: ${s.caps?.reason ?? s.error?.message ?? 'unknown reason'}`, 'bad');
+      document.body.dataset.state = 'no-webgpu';
+      break;
+    case 'refused':
+      setStatus(`Cannot bake: ${s.error?.message}. Add <code>?allowFallbackAdapter=1</code> to bake on it anyway (slow, labelled).`, 'bad');
+      document.body.dataset.state = 'fallback-adapter-refused';
+      break;
+    case 'error':
+      setStatus(`Cannot bake: ${s.error?.message ?? 'no adapter'}`, 'bad');
+      document.body.dataset.state = s.error?.kind ?? 'error';
+      break;
+    case 'lost':
+      setStatus(`GPU device lost: ${s.error?.message ?? ''}`, 'bad');
+      document.body.dataset.state = 'device-lost';
+      break;
+    case 'ready':
+      setStatus(s.adapter?.software ? 'WebGPU ready — on a software adapter' : 'WebGPU ready', s.adapter?.software ? 'warn' : 'good');
+      // after startup or a recreate; a finished bake keeps its outcome (done, cancelled, …)
+      if (!job && [undefined, '', 'device-lost'].includes(document.body.dataset.state)) document.body.dataset.state = 'ready';
+      break;
   }
-};
+}
+service.onChange = render;
 
 async function start() {
-  const [init, scene] = await Promise.all([client.init(allowFallbackAdapter), fetch(sceneUrl).then((r) => r.arrayBuffer())]);
+  const [, scene] = await Promise.all([service.start(), fetch(sceneUrl).then((r) => r.arrayBuffer())]);
   sceneBytes = new Uint8Array(scene);
   view?.setScene(sceneBytes);
-  if (!init.caps.webgpu) {
-    setStatus(`WebGPU baking is unavailable: ${init.caps.reason ?? 'unknown reason'}`, 'bad');
-    document.body.dataset.state = 'no-webgpu';
-    return;
-  }
-  if (init.error || !init.adapter) {
-    const why = init.error?.kind === 'fallback-adapter-refused' ? `${init.error.message}. Add <code>?allowFallbackAdapter=1</code> to bake on it anyway (slow, labelled).` : (init.error?.message ?? 'no adapter');
-    setStatus(`Cannot bake: ${why}`, 'bad');
-    if (init.caps.adapter) $('adapter').innerHTML = adapterLine(init.caps.adapter);
-    document.body.dataset.state = init.error?.kind ?? 'error';
-    return;
-  }
-  setStatus(init.adapter.software ? 'WebGPU ready — on a software adapter' : 'WebGPU ready', init.adapter.software ? 'warn' : 'good');
-  $('adapter').innerHTML = adapterLine(init.adapter);
-  ($('bake') as HTMLButtonElement).disabled = false;
-  document.body.dataset.state = 'ready';
-  if (params.get('autobake') === '1') void bake();
+  render();
+  if (service.state === 'ready' && params.get('autobake') === '1') void bake();
 }
-
 async function bake() {
   if (!sceneBytes || job) return;
   ($('bake') as HTMLButtonElement).disabled = true;
@@ -102,7 +118,7 @@ async function bake() {
     $('progress').textContent = `${name}: ${p.done} / ${p.total} · ${fmtMs(p.elapsedMs)}`;
   };
   const config = { ...(PROFILES[profile] ?? {}), incremental: { reuseTiles: ($('reuse') as HTMLInputElement).checked } };
-  const run = client.bake(sceneBytes.buffer.slice(sceneBytes.byteOffset, sceneBytes.byteOffset + sceneBytes.byteLength) as ArrayBuffer, { config, expect: expectJson, onProgress });
+  const run = service.client.bake(sceneBytes.buffer.slice(sceneBytes.byteOffset, sceneBytes.byteOffset + sceneBytes.byteLength) as ArrayBuffer, { config, expect: expectJson, onProgress });
   job = run.jobId;
   try {
     const out = await run.result;
@@ -155,7 +171,10 @@ function showResult(out: BakeOutput & { elapsedMs: number }, phaseEnds: [string,
 
 $('bake').addEventListener('click', () => void bake());
 $('cancel').addEventListener('click', () => {
-  if (job) client.cancel(job);
+  if (job) service.client.cancel(job);
 });
+
+$('recreate').addEventListener('click', () => void service.recreate());
+$('lose').addEventListener('click', () => service.client.debugLoseDevice());
 
 void start();

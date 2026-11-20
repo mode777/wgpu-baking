@@ -1,6 +1,8 @@
 # ADR-0002: Bake in a dedicated Web Worker with its own WebGPU device
 
-- **Status:** proposed (confirmed by the Phase 2 spike)
+- **Status:** accepted — confirmed by the Phase 2 PoC (P2.5–P2.7): the baker runs in a module worker,
+  cancels within one GPU batch, and recovers from device loss by recreating the worker
+  (`app/src/bake/service.ts`)
 - **Date:** 2026-11-20
 - **Phase:** 2
 - **Requirements:** REQ-WASM-02, REQ-WASM-06, REQ-WASM-07, REQ-APP-06
