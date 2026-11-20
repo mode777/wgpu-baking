@@ -103,7 +103,7 @@ Requirements: REQ-WASM-01 … 04, -06, -07, -08 (basic), -10; REQ-ENG-05 (first 
 **Goal:** automatic lightmap UVs with xatlas feeding the unchanged GI pipeline.
 **Deliverable:** browser bake of imported-style meshes with xatlas UVs, no leaks.
 
-- [ ] **P3.1** `xatlas-wasm-evaluation` — ≤ 1 day: load pinned `xatlas-wasm` in the baker worker
+- [x] **P3.1** `xatlas-wasm-evaluation` — ≤ 1 day: load pinned `xatlas-wasm` in the baker worker
       under Vite, unwrap test meshes per object tile, confirm options/outputs needed by ADR-0004,
       record timings and memory in ADR-0006.
 - [ ] **P3.2** `scene-format-v2` — `.lbscene` v2 in Rust and TS (indexed meshes, normals, material

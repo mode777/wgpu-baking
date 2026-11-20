@@ -16,6 +16,8 @@ assets) and rerun it whenever `Cargo.lock` or a package manifest changes.
 | typescript (npm, dev) | 7.0.2 | Apache-2.0 | https://github.com/microsoft/TypeScript | typecheck |
 | @playwright/test (npm, dev) | 1.65.1 | Apache-2.0 | https://github.com/microsoft/playwright | browser checks (app/scripts/hw-check.mjs) and e2e |
 | @types/three, @types/node (npm, dev) | 0.187.0, 26.6.6 | MIT | https://github.com/DefinitelyTyped/DefinitelyTyped | type definitions |
+| xatlas-wasm (npm) | 0.2.0 | MIT | https://github.com/mode777/xatlas-wasm | app runtime: lightmap UVs in the baker worker (bundled, incl. xatlas.wasm) |
+| xatlas (inside xatlas-wasm) | f700c77 | MIT, Copyright (c) 2018-2020 Jonathan Young (see the package NOTICE) | https://github.com/jpcy/xatlas | compiled to wasm by xatlas-wasm |
 
 ## Rust crates (183, from Cargo.lock)
 

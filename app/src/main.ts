@@ -9,6 +9,7 @@ import expectJson from '../../test-scenes/upstream-basic/expect.json?raw';
 import type { BakeFailure, ProgressEvent } from './bake/client';
 import { BakerService } from './bake/service';
 import type { AdapterInfo, BakeConfigOverrides, BakeOutput } from './bake/protocol';
+import { readScene } from '@orbitoon/lightbaker';
 import { LightmapView, type ViewMode } from './view/lightmapView';
 
 /** Bake settings by profile; `full` is the scene's own (what the native baseline baked). */
@@ -62,6 +63,8 @@ function render() {
   ($('recreate') as HTMLButtonElement).hidden = s.state !== 'lost';
   ($('lose') as HTMLButtonElement).hidden = !debug || s.state !== 'ready';
   ($('bake') as HTMLButtonElement).disabled = s.state !== 'ready' || job !== null || !sceneBytes;
+  // the unwrap needs the worker, not WebGPU
+  ($('unwrap') as HTMLButtonElement).disabled = s.state === 'starting' || s.state === 'lost' || job !== null || !sceneBytes;
   const adapter = s.adapter ?? s.caps?.adapter;
   $('adapter').innerHTML = adapter ? adapterLine(adapter) : '';
   switch (s.state) {
@@ -173,6 +176,33 @@ function showResult(out: BakeOutput & { elapsedMs: number }, phaseEnds: [string,
 }
 
 $('bake').addEventListener('click', () => void bake());
+$('unwrap').addEventListener('click', () => void unwrap());
+
+/** xatlas lightmap UVs for each mesh of the scene, in the worker (P3.1 evaluation; not yet used by the bake). */
+async function unwrap() {
+  if (!sceneBytes || job) return;
+  const { header } = readScene(sceneBytes);
+  ($('unwrap') as HTMLButtonElement).disabled = true;
+  $('unwrap-summary').textContent = 'unwrapping…';
+  const run = service.client.unwrap(sceneBytes.slice().buffer, { texelsPerMeter: header.lightmap.texelsPerMeter, padding: header.lightmap.padding });
+  job = run.jobId;
+  try {
+    const r = await run.result;
+    const valid = r.meshes.every((m) => m.valid);
+    const sum = $('unwrap-summary');
+    sum.innerHTML = `<span class="${valid ? 'good' : 'bad'}">${valid ? 'valid UVs' : 'INVALID UVs'}</span> · ${fmtMs(r.elapsedMs)} (xatlas load ${fmtMs(r.loadMs)})`;
+    sum.dataset.valid = String(valid);
+    $('unwrap-result').innerHTML =
+      '<tr><td>mesh</td><td class="num">tris</td><td class="num">charts</td><td class="num">tile</td><td class="num">used</td><td class="num">time</td></tr>' +
+      r.meshes.map((m) => `<tr><td class="${m.valid ? 'good' : 'bad'}">${m.name}</td><td class="num">${m.triangles}</td><td class="num">${m.charts}</td><td class="num">${m.width}×${m.height}</td><td class="num">${(m.utilisation * 100).toFixed(0)} %</td><td class="num">${fmtMs(m.ms)}</td></tr>`).join('');
+  } catch (e) {
+    const f = e as BakeFailure;
+    $('unwrap-summary').innerHTML = `<span class="bad">${f.kind}: ${f.message}</span>`;
+  } finally {
+    job = null;
+    render();
+  }
+}
 $('cancel').addEventListener('click', () => {
   if (job) service.client.cancel(job);
 });

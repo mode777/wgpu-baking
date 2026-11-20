@@ -183,6 +183,9 @@ importers:
       three:
         specifier: ^0.187.0
         version: 0.187.0
+      xatlas-wasm:
+        specifier: 0.2.0
+        version: 0.2.0
     devDependencies:
       '@playwright/test':
         specifier: ^1.65.1
@@ -795,6 +798,10 @@ packages:
     engines: {node: '>=20.11'}
     hasBin: true
 
+  xatlas-wasm@0.2.0:
+    resolution: {integrity: sha512-0hiBM8Onf+LrLX6JvOMfJfYw03HKx3D0ZRsfUeITZIvnLgpNN9iGbPQdM53nzmfev/H+T81R0ur/A1IxeNvO6Q==}
+    engines: {node: '>=16.0.0'}
+
 snapshots:
 
   '@dimforge/rapier3d-compat@0.12.0': {}
@@ -1191,3 +1198,5 @@ snapshots:
       - msw
 
   why-is-node-running@3.2.1: {}
+
+  xatlas-wasm@0.2.0: {}

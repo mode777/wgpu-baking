@@ -3,7 +3,7 @@
  * `WorkerLike` (a real `Worker`, or a fake wired to `bakerCore` in tests).
  */
 
-import type { AdapterInfo, BakeConfigOverrides, BakeEvent, BakeOutput, BakeRequest, BakerCapabilities, BakerError } from './protocol';
+import type { AdapterInfo, BakeConfigOverrides, BakeEvent, BakeOutput, BakeRequest, BakerCapabilities, BakerError, UnwrapConfig, UnwrapResult } from './protocol';
 
 export interface WorkerLike {
   postMessage(msg: BakeRequest, transfer?: Transferable[]): void;
@@ -25,7 +25,8 @@ export interface InitResult {
 
 export class BakerClient {
   private next = 1;
-  private jobs = new Map<string, { resolve: (r: BakeOutput & { elapsedMs: number }) => void; reject: (e: BakeFailure) => void; onProgress?: (p: ProgressEvent) => void }>();
+  // bakes resolve with BakeOutput, unwraps with UnwrapResult (both plus elapsedMs)
+  private jobs = new Map<string, { resolve: (r: never) => void; reject: (e: BakeFailure) => void; onProgress?: (p: ProgressEvent) => void }>();
   private initWaiter: { resolve: (r: InitResult) => void; caps?: BakerCapabilities } | null = null;
   /** told about errors outside a bake, such as device loss */
   onError: ((e: BakerError) => void) | null = null;
@@ -44,11 +45,22 @@ export class BakerClient {
   bake(scene: ArrayBuffer, options: { config?: BakeConfigOverrides; expect?: string; onProgress?: (p: ProgressEvent) => void } = {}): { jobId: string; result: Promise<BakeOutput & { elapsedMs: number }> } {
     const jobId = `job-${this.next++}`;
     const result = new Promise<BakeOutput & { elapsedMs: number }>((resolve, reject) => {
-      this.jobs.set(jobId, { resolve, reject, onProgress: options.onProgress });
+      this.jobs.set(jobId, { resolve: resolve as (r: never) => void, reject, onProgress: options.onProgress });
     });
     // the page keeps its copy of the scene: send a copy, not the buffer itself
     const copy = scene.slice(0);
     this.worker.postMessage({ type: 'bake', jobId, scene: copy, config: options.config, expect: options.expect }, [copy]);
+    return { jobId, result };
+  }
+
+  /** xatlas lightmap UVs for each mesh of a scene (one object tile each), computed in the worker. */
+  unwrap(scene: ArrayBuffer, config: UnwrapConfig): { jobId: string; result: Promise<UnwrapResult & { elapsedMs: number }> } {
+    const jobId = `job-${this.next++}`;
+    const result = new Promise<UnwrapResult & { elapsedMs: number }>((resolve, reject) => {
+      this.jobs.set(jobId, { resolve: resolve as (r: never) => void, reject });
+    });
+    const copy = scene.slice(0);
+    this.worker.postMessage({ type: 'unwrap', jobId, scene: copy, config }, [copy]);
     return { jobId, result };
   }
 
@@ -80,7 +92,11 @@ export class BakerClient {
         this.jobs.get(e.jobId)?.onProgress?.(e);
         return;
       case 'done':
-        this.jobs.get(e.jobId)?.resolve({ ...e.result, elapsedMs: e.elapsedMs });
+        (this.jobs.get(e.jobId)?.resolve as ((r: BakeOutput & { elapsedMs: number }) => void) | undefined)?.({ ...e.result, elapsedMs: e.elapsedMs });
+        this.jobs.delete(e.jobId);
+        return;
+      case 'unwrapped':
+        (this.jobs.get(e.jobId)?.resolve as ((r: UnwrapResult & { elapsedMs: number }) => void) | undefined)?.({ ...e.result, elapsedMs: e.elapsedMs });
         this.jobs.delete(e.jobId);
         return;
       case 'cancelled':

@@ -6,10 +6,60 @@
     "source": "https://github.com/jer-nc/lightbaker",
     "notes": "Forked engine, CLI, js/ package, docs/DESIGN.md, docs/FORMAT.md, docs/images/"
   },
-  { "name": "three (npm)", "version": "0.187.0", "license": "MIT", "source": "https://github.com/mrdoob/three.js", "notes": "app runtime: lightmap view (bundled into app/dist)" },
-  { "name": "vite (npm, dev)", "version": "8.3.8", "license": "MIT", "source": "https://github.com/vitejs/vite", "notes": "app build/dev server" },
-  { "name": "vitest (npm, dev)", "version": "5.1.1", "license": "MIT", "source": "https://github.com/vitest-dev/vitest", "notes": "js/ and app/ unit tests" },
-  { "name": "typescript (npm, dev)", "version": "7.0.2", "license": "Apache-2.0", "source": "https://github.com/microsoft/TypeScript", "notes": "typecheck" },
-  { "name": "@playwright/test (npm, dev)", "version": "1.65.1", "license": "Apache-2.0", "source": "https://github.com/microsoft/playwright", "notes": "browser checks (app/scripts/hw-check.mjs) and e2e" },
-  { "name": "@types/three, @types/node (npm, dev)", "version": "0.187.0, 26.6.6", "license": "MIT", "source": "https://github.com/DefinitelyTyped/DefinitelyTyped", "notes": "type definitions" }
+  {
+    "name": "three (npm)",
+    "version": "0.187.0",
+    "license": "MIT",
+    "source": "https://github.com/mrdoob/three.js",
+    "notes": "app runtime: lightmap view (bundled into app/dist)"
+  },
+  {
+    "name": "vite (npm, dev)",
+    "version": "8.3.8",
+    "license": "MIT",
+    "source": "https://github.com/vitejs/vite",
+    "notes": "app build/dev server"
+  },
+  {
+    "name": "vitest (npm, dev)",
+    "version": "5.1.1",
+    "license": "MIT",
+    "source": "https://github.com/vitest-dev/vitest",
+    "notes": "js/ and app/ unit tests"
+  },
+  {
+    "name": "typescript (npm, dev)",
+    "version": "7.0.2",
+    "license": "Apache-2.0",
+    "source": "https://github.com/microsoft/TypeScript",
+    "notes": "typecheck"
+  },
+  {
+    "name": "@playwright/test (npm, dev)",
+    "version": "1.65.1",
+    "license": "Apache-2.0",
+    "source": "https://github.com/microsoft/playwright",
+    "notes": "browser checks (app/scripts/hw-check.mjs) and e2e"
+  },
+  {
+    "name": "@types/three, @types/node (npm, dev)",
+    "version": "0.187.0, 26.6.6",
+    "license": "MIT",
+    "source": "https://github.com/DefinitelyTyped/DefinitelyTyped",
+    "notes": "type definitions"
+  },
+  {
+    "name": "xatlas-wasm (npm)",
+    "version": "0.2.0",
+    "license": "MIT",
+    "source": "https://github.com/mode777/xatlas-wasm",
+    "notes": "app runtime: lightmap UVs in the baker worker (bundled, incl. xatlas.wasm)"
+  },
+  {
+    "name": "xatlas (inside xatlas-wasm)",
+    "version": "f700c77",
+    "license": "MIT, Copyright (c) 2018-2020 Jonathan Young (see the package NOTICE)",
+    "source": "https://github.com/jpcy/xatlas",
+    "notes": "compiled to wasm by xatlas-wasm"
+  }
 ]

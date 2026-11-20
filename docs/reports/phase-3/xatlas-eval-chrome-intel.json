@@ -1,0 +1,240 @@
+{
+  "channel": "chrome",
+  "profile": "full",
+  "browser": "157.0.8103.80",
+  "gpuAdapter": {
+    "vendor": "intel",
+    "architecture": "xe-3lpg",
+    "device": "",
+    "description": "",
+    "isFallbackAdapter": false
+  },
+  "firstBake": {
+    "state": "done",
+    "wallMs": 732,
+    "status": "WebGPU ready",
+    "adapter": "intel xe-3lpg (BrowserWebGpu, Other)storage binding 2047 MiB · buffer 2048 MiB · workgroups/dim 65535",
+    "outcome": "baked in 528 ms",
+    "timings": {
+      "layout": "7 ms",
+      "direct": "282 ms",
+      "bounce 1": "123 ms",
+      "bounce 2": "26 ms",
+      "volume": "19 ms",
+      "total (worker)": "528 ms",
+      "engine bake.seconds": "0.460 s",
+      "triangles / charts": "538 / 29",
+      "tiles baked": "16 of 16",
+      "atlas": "1024×180 (indirect 512×90)",
+      "GPU batches / readbacks": "7 / 7",
+      "read back / uploaded": "1.85 MiB / 15.29 MiB",
+      ".lbake": "0.37 MiB",
+      "wasm memory": "33.44 MiB"
+    },
+    "checks": {
+      "text": "19 of 19 checks passed",
+      "passed": "true",
+      "count": "19"
+    },
+    "checkValues": [
+      {
+        "name": "box shadow east of the box",
+        "a": 0,
+        "b": 0.4,
+        "passed": true
+      },
+      {
+        "name": "sunlit ground west of the box",
+        "a": 1,
+        "b": 0.6,
+        "passed": true
+      },
+      {
+        "name": "occlusion at the box's foot",
+        "a": 0.883,
+        "b": 0.9,
+        "passed": true
+      },
+      {
+        "name": "red wall bleeds onto the ground",
+        "a": 2.352,
+        "b": 1.006,
+        "passed": true
+      },
+      {
+        "name": "sky lights the open ground",
+        "a": 1.068,
+        "b": 0,
+        "passed": true
+      },
+      {
+        "name": "volume sees the sun in the open",
+        "a": 1,
+        "b": 0.9,
+        "passed": true
+      },
+      {
+        "name": "volume in the wall's shadow",
+        "a": 0,
+        "b": 0.1,
+        "passed": true
+      },
+      {
+        "name": "light along the strip (0)",
+        "a": 3.311,
+        "b": 0.1,
+        "passed": true
+      },
+      {
+        "name": "light along the strip (1)",
+        "a": 3.311,
+        "b": 0.1,
+        "passed": true
+      },
+      {
+        "name": "light along the strip (2)",
+        "a": 3.258,
+        "b": 0.1,
+        "passed": true
+      },
+      {
+        "name": "light along the strip (3)",
+        "a": 3.258,
+        "b": 0.1,
+        "passed": true
+      },
+      {
+        "name": "light along the strip (4)",
+        "a": 3.258,
+        "b": 0.1,
+        "passed": true
+      },
+      {
+        "name": "light along the strip (5)",
+        "a": 3.194,
+        "b": 0.1,
+        "passed": true
+      },
+      {
+        "name": "light along the strip (6)",
+        "a": 3.194,
+        "b": 0.1,
+        "passed": true
+      },
+      {
+        "name": "light along the strip (7)",
+        "a": 3.122,
+        "b": 0.1,
+        "passed": true
+      },
+      {
+        "name": "light along the strip (8)",
+        "a": 3.122,
+        "b": 0.1,
+        "passed": true
+      },
+      {
+        "name": "light along the strip (9)",
+        "a": 3.122,
+        "b": 0.1,
+        "passed": true
+      },
+      {
+        "name": "light along the strip (10)",
+        "a": 3.053,
+        "b": 0.1,
+        "passed": true
+      },
+      {
+        "name": "light along the strip (11)",
+        "a": 3.053,
+        "b": 0.1,
+        "passed": true
+      }
+    ],
+    "warnings": "—"
+  },
+  "cancel": "cancelled",
+  "rebake": {
+    "state": "done",
+    "checks": "19 of 19 checks passed"
+  },
+  "unwrap": [
+    {
+      "summary": "valid UVs · 43 ms (xatlas load 26 ms)",
+      "valid": "true",
+      "meshes": [
+        [
+          "ground",
+          "512",
+          "1",
+          "257×257",
+          "100 %",
+          "16 ms"
+        ],
+        [
+          "box",
+          "12",
+          "6",
+          "35×22",
+          "100 %",
+          "0 ms"
+        ],
+        [
+          "wall",
+          "12",
+          "6",
+          "60×81",
+          "96 %",
+          "1 ms"
+        ],
+        [
+          "strip",
+          "2",
+          "1",
+          "2×11",
+          "100 %",
+          "0 ms"
+        ]
+      ]
+    },
+    {
+      "summary": "valid UVs · 6 ms (xatlas load 0 ms)",
+      "valid": "true",
+      "meshes": [
+        [
+          "ground",
+          "512",
+          "1",
+          "257×257",
+          "100 %",
+          "4 ms"
+        ],
+        [
+          "box",
+          "12",
+          "6",
+          "35×22",
+          "100 %",
+          "1 ms"
+        ],
+        [
+          "wall",
+          "12",
+          "6",
+          "60×81",
+          "96 %",
+          "0 ms"
+        ],
+        [
+          "strip",
+          "2",
+          "1",
+          "2×11",
+          "100 %",
+          "0 ms"
+        ]
+      ]
+    }
+  ]
+}

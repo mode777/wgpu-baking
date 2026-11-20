@@ -7,6 +7,7 @@
 //                                                   [--browser-arg <chrome flag>]… (e.g. --use-webgpu-adapter=swiftshader)
 //                                                   [--lose-device] (device.destroy() → recreate → bake)
 //                                                   [--bench N] (N warm full bakes: median per phase)
+//                                                   [--unwrap] (xatlas in the worker: cold and warm unwrap)
 
 import { spawn } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
@@ -71,6 +72,20 @@ try {
     result.rebake = { state: await page.evaluate(() => document.body.dataset.state), checks: await page.textContent('#checks-summary') };
   }
   await page.screenshot({ path: arg('--screenshot', 'hw-check.png') });
+  if (has('--unwrap')) {
+    // xatlas in the worker (P3.1): the first unwrap loads xatlas-wasm, the second is warm
+    const unwraps = [];
+    for (let i = 0; i < 2; i++) {
+      await page.click('#unwrap');
+      await page.waitForFunction(() => { const s = document.querySelector('#unwrap-summary')?.textContent; return !!s && s !== 'unwrapping…'; }, null, { timeout: 120_000 });
+      unwraps.push({
+        summary: await page.textContent('#unwrap-summary'),
+        valid: await page.getAttribute('#unwrap-summary', 'data-valid'),
+        meshes: await page.$$eval('#unwrap-result tr', (rows) => rows.slice(1).map((r) => Array.from(r.cells).map((c) => c.textContent))),
+      });
+    }
+    result.unwrap = unwraps;
+  }
   const bench = Number(arg('--bench', '0'));
   if (bench > 0 && result.firstBake.state === 'done') {
     // warm, full bakes (no tile reuse): the median per phase, comparable with the native `baseline` example

@@ -75,3 +75,47 @@ The brief asks to integrate xatlas into the Rust baking pipeline. Findings
 P3.1 (evaluation, ≤ 1 day): load `xatlas-wasm` in our baker worker under Vite, unwrap the test
 meshes per object tile, confirm the options and outputs ADR-0004 needs, record timings and memory.
 P3.6: the UV validity suite passes natively and in the browser, with native/web equivalence checks.
+
+## Evaluation results (P3.1, 2026-11-20)
+
+`xatlas-wasm@0.2.0` (exact), adapter `app/src/bake/xatlasUnwrapper.ts`, validity checks
+`app/src/bake/uvValidity.ts`, tests `app/test/xatlas.test.ts`, browser run
+[docs/reports/phase-3/xatlas-eval-chrome-intel.json](../reports/phase-3/xatlas-eval-chrome-intel.json).
+
+- **Loads in the baker worker under Vite** with the package's default loader (`new URL('xatlas.wasm',
+  import.meta.url)`): Vite emits `xatlas.wasm` (173 KB, 71 KB gzip) as a worker asset. The package only
+  exports its entry point, so `xatlas-wasm/dist/xatlas.wasm?url` cannot be imported — not needed.
+  Load time: 26 ms in Chrome's worker (Intel machine), 4–6 ms in Node.
+- **Options ADR-0004 needs are all there:** one atlas per tile, `resolution = 0` (auto-sized),
+  `texelsPerUnit = texelsPerMeter`, `padding`, `bilinear`, `faceMaterialData` (charts never span
+  materials — tested), chart options. Outputs: per-vertex UV in **atlas texels** (not normalised), `xref`,
+  new `indices` (same triangle order as the input), `chartIndex`, atlas width/height, utilisation.
+- **Validity** (out-of-range, degenerate, flipped, `xref` positions, mixed-material charts, density ±20 %):
+  passes for a unit quad (33×33 tile at 32 texels/m, padding 2), a 3-material box, the four
+  `upstream-basic` meshes, a 64×32 UV sphere and a 256×32 torus knot. Charts smaller than 4×4 texels
+  at the requested density are excluded from the density check (xatlas gives every chart ≥ 1 texel:
+  the 5 cm strip at 4 texels/m becomes a 2×11 tile).
+- **Deterministic** with itself (two unwraps → identical UVs); Chrome and Node give identical tile sizes.
+- **Timings** (Node, same wasm; Chrome warm is similar):
+
+  | Mesh | Triangles | Charts | Tile | Utilisation | Time | of which charts |
+  |---|---:|---:|---|---:|---:|---:|
+  | upstream-basic ground (4 texels/m) | 512 | 1 | 257×257 | 100 % | 7 ms | 1 ms |
+  | upstream-basic box / wall | 12 | 6 | 35×22 / 60×81 | 100 / 96 % | < 1 ms | — |
+  | UV sphere 64×32 (64 texels/m) | 3 968 | 9 | 302×323 | 64 % | 125 ms | 113 ms |
+  | torus knot 256×32 (64 texels/m) | 16 384 | 32 | 615×617 | 48 % | 1 929 ms | 1 890 ms |
+
+  Browser (Chrome, worker): whole `upstream-basic` scene 43 ms cold (incl. 26 ms load), 6 ms warm.
+- **Memory:** no measurable growth of Node's `arrayBuffers` for the small meshes, +0.3 MiB for the torus
+  knot; `destroy()` after each tile releases the atlas. Output copies are typed arrays (`uv` 8 B,
+  `xref` 4 B, `chart` 4 B per vertex; indices 12 B per triangle).
+- **Caveats for the integration:**
+  - **Chart computation dominates and grows super-linearly** (16 k triangles ≈ 1.9 s, single-threaded):
+    caching charts per object tile by geometry hash (decision 4) is required for interactive rebakes;
+    large meshes should be split into tiles; Phase 5 must show unwrap progress.
+  - `getMesh().vertices` is an array of objects; copying it into typed arrays costs < 1 ms per 10 k
+    vertices — not a bottleneck.
+  - Utilisation of curved meshes is 48–64 % with the default (non-brute-force) packing; brute force is an
+    option for final bakes (`xatlas.bruteForcePacking`).
+
+**Conclusion:** keep the decision; no fallback (watlas / own Emscripten build) needed.

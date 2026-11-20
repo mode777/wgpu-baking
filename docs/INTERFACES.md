@@ -235,6 +235,12 @@ without `jobId` (`no-webgpu`, `fallback-adapter-refused`, …); `bake` carries `
 baker (a new worker and device; the tile store is lost with the old worker). `{ type:
 'debug-lose-device' }` (debug sessions, `?debug=1`) destroys the worker's device for manual checks.
 The protocol logic is `app/src/bake/bakerCore.ts` (tested with a fake bridge).
+
+`unwrap` (P3.1): `{ type: 'unwrap'; jobId; scene; config: { texelsPerMeter, padding, xatlas? } }` →
+`{ type: 'unwrapped'; jobId; result: { loadMs, meshes: [{ name, width, height, charts, utilisation,
+triangles, uv, xref, indices, ms, valid }] }; elapsedMs }`: each mesh of the `.lbscene` is one object tile,
+unwrapped with `xatlas-wasm` in the worker (`app/src/bake/unwrapScene.ts`); `uv` in tile texels; arrays
+transferred. Not yet used by the bake (P3.3–P3.8).
 The browser's `GPUAdapterInfo` (vendor, architecture) completes the adapter report and also decides
 whether it is a software adapter (Chrome need not set `isFallbackAdapter` for lavapipe).
 

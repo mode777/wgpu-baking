@@ -14,7 +14,8 @@
   },
   "dependencies": {
     "@orbitoon/lightbaker": "workspace:*",
-    "three": "^0.187.0"
+    "three": "^0.187.0",
+    "xatlas-wasm": "0.2.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.65.1",

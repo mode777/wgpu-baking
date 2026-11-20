@@ -6,6 +6,7 @@
 
 import init, { WebBaker, capabilities } from 'lightbaker-web';
 import { createBakerCore, type Bridge, type BridgeBaker } from './bakerCore';
+import { unwrapScene } from './unwrapScene';
 import type { BakeRequest } from './protocol';
 
 declare const self: DedicatedWorkerGlobalScope;
@@ -33,7 +34,7 @@ const bridge: Bridge = {
   },
 };
 
-const core = createBakerCore(bridge, (event, transfer) => self.postMessage(event, { transfer: transfer ?? [] }));
+const core = createBakerCore(bridge, (event, transfer) => self.postMessage(event, { transfer: transfer ?? [] }), undefined, (scene, config) => unwrapScene(scene, config));
 
 self.onmessage = (e: MessageEvent<BakeRequest>) => {
   void core.handle(e.data);

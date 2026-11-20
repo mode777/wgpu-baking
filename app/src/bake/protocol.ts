@@ -81,6 +81,36 @@ export interface BakeOutput {
 /** A partial `BakeConfig` (INTERFACES.md §4); the bridge applies what it supports and warns about the rest. */
 export type BakeConfigOverrides = Record<string, unknown>;
 
+/** `BakeConfig.lightmap` as far as the unwrap uses it. */
+export interface UnwrapConfig {
+  texelsPerMeter: number;
+  padding: number;
+  xatlas?: { maxChartArea?: number; maxBoundaryLength?: number; normalDeviationWeight?: number; roundnessWeight?: number; straightnessWeight?: number; maxIterations?: number; bruteForcePacking?: boolean };
+}
+
+export interface UnwrappedMeshResult {
+  name: string;
+  /** the object tile's size in texels */
+  width: number;
+  height: number;
+  charts: number;
+  utilisation: number;
+  triangles: number;
+  /** per output vertex: uv in tile texels (xy), input vertex, chart; three indices a triangle */
+  uv: Float32Array;
+  xref: Uint32Array;
+  indices: Uint32Array;
+  ms: number;
+  /** UV validity (docs/TESTING.md) */
+  valid: boolean;
+}
+
+export interface UnwrapResult {
+  /** time to load xatlas in this worker (0 once loaded) */
+  loadMs: number;
+  meshes: UnwrappedMeshResult[];
+}
+
 /** Device loss is reported once per baker as an `error` without `jobId`; a bake running at that moment also
  * ends with its own `device-lost` error. */
 /** Device loss is reported once per baker as an `error` without `jobId`; a bake running at that moment also
@@ -88,6 +118,8 @@ export type BakeConfigOverrides = Record<string, unknown>;
 export type BakeRequest =
   | { type: 'init'; allowFallbackAdapter: boolean }
   | { type: 'bake'; jobId: Id; scene: ArrayBuffer; config?: BakeConfigOverrides; expect?: string }
+  /** xatlas lightmap UVs for each mesh of an `.lbscene`, each mesh one object tile (P3.1) */
+  | { type: 'unwrap'; jobId: Id; scene: ArrayBuffer; config: UnwrapConfig }
   | { type: 'cancel'; jobId: Id }
   | { type: 'dispose' }
   /** debug sessions only (`?debug=1`): destroy the worker's GPU device, as a driver reset would */
@@ -99,6 +131,7 @@ export type BakeEvent =
   | { type: 'ready'; adapter: AdapterInfo }
   | { type: 'progress'; jobId: Id; phase: BakePhase; bounce: number; done: number; total: number; elapsedMs: number }
   | { type: 'done'; jobId: Id; result: BakeOutput; elapsedMs: number }
+  | { type: 'unwrapped'; jobId: Id; result: UnwrapResult; elapsedMs: number }
   | { type: 'cancelled'; jobId: Id }
   | { type: 'error'; jobId?: Id; error: BakerError };
 
